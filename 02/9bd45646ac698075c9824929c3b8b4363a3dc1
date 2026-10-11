@@ -1,0 +1,21 @@
+docs/validation.md
+  s_bab663aecd558e::t_380fbc651364cf 29
+styles.css
+  s_bab663aecd558e::t_b097b14647692b 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "029bd45646ac698075c9824929c3b8b4363a3dc1",
+  "prompts": {},
+  "sessions": {
+    "s_bab663aecd558e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12a51-9cd0-7ee2-8847-d046825b408b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "dingxinyi.2 <dingxinyi.2@jd.com>"
+    }
+  }
+}
