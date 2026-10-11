@@ -80,7 +80,7 @@ npm run test:coverage
 npm run package
 ```
 
-Runtime verification in the isolated Chinese test vault is available via `node scripts/verify-obsidian.mjs`; it creates a uniquely named synthetic note. See [validation notes](docs/validation.md) for tested behavior and remaining release checks.
+Runtime verification in the isolated Chinese test vault is available via `node scripts/verify-obsidian.mjs`; it creates a uniquely named synthetic note. Keep that vault window visible for reading-mode checks. Hidden-window skips are reported explicitly. See [validation notes](docs/validation.md) for tested behavior and remaining release checks.
 
 Copy the files in `dist/loose-json-0.1.0/` into a test vault. `npm run dev` rebuilds on source changes; it does not start an HTTP server. Reload the plugin after rebuilding.
 

@@ -10,6 +10,8 @@ const path = `Loose JSON 自动验收-${Date.now()}.md`;
 const source = '```json\n{"items":[1,2],"id":9223372036854775807}\n```\n\n2026-10-08 15:59:55.931 | WARN | 11.247.172.117 | response={"a":1}\n\n```json\n{"data":"{\\"total\\":1}","path":"C:\\\\tmp"}\n```\n\n```js\n{"keep":1}\n```\n';
 /** 当前流程已通过的用户行为 */
 const checks = [];
+/** 需要前台测试窗口才能验证的场景，跳过时明确报告 */
+const skipped = [];
 
 /** 调用官方 CLI，参数数组不会解释反引号或用户文本 */
 function evaluate(code) {
@@ -20,7 +22,11 @@ function evaluate(code) {
 }
 
 /** 读取宿主中的 JSON 状态，不以命令退出码代替行为验收 */
-function state(expression) {return JSON.parse(evaluate(`JSON.stringify(${expression})`));}
+function state(expression) {
+  // 宿主切换视图时 CLI 偶尔返回空输出，由 until 继续等待而非误报解析失败。
+  const output = evaluate(`JSON.stringify((${expression}) ?? null)`);
+  return output ? JSON.parse(output) : null;
+}
 
 /** 允许 Electron 异步渲染或工作线程完成，十秒后明确失败 */
 async function until(expression, predicate = value => Boolean(value)) {
@@ -110,17 +116,21 @@ assert.equal(state('app.setting.pluginTabs.find(tab=>tab.id==="loose-json").getS
 checks.push('按钮设置即时更新；五项设置可被宿主搜索');
 
 // 阅读模式按钮核验源位置后打开编辑器应用，不直接写 DOM 文本。
-evaluate(`app.workspace.activeLeaf.setViewState({type:"markdown",state:{file:${JSON.stringify(path)},mode:"preview"}}); "reading"`);
-await until('document.querySelectorAll(".loose-json-reading-action").length', value => value === 2);
-evaluate('document.querySelector(".loose-json-reading-action").click(); "clicked"');
-await until('app.workspace.activeLeaf.view.getMode()', value => value === 'source');
-await until('app.workspace.activeLeaf.view.editor.getValue()', value => value.includes('  "items": ['));
-editor('editor.undo()');
-assert.equal(state('app.workspace.activeLeaf.view.editor.getValue()'), source);
-checks.push('阅读按钮准确定位原块，切换编辑并可撤销');
+if (state('document.visibilityState') === 'visible') {
+  evaluate(`app.workspace.activeLeaf.setViewState({type:"markdown",state:{file:${JSON.stringify(path)},mode:"preview"}}); "reading"`);
+  await until('document.querySelectorAll(".loose-json-reading-action").length', value => value === 2);
+  evaluate('document.querySelector(".loose-json-reading-action").click(); "clicked"');
+  await until('app.workspace.activeLeaf.view.getMode()', value => value === 'source');
+  await until('app.workspace.activeLeaf.view.editor.getValue()', value => value.includes('  "items": ['));
+  editor('editor.undo()');
+  assert.equal(state('app.workspace.activeLeaf.view.editor.getValue()'), source);
+  checks.push('阅读按钮准确定位原块，切换编辑并可撤销');
+} else {
+  skipped.push('阅读模式：测试库窗口隐藏，Obsidian 不渲染阅读内容；保持窗口可见后重新运行。');
+}
 
 /** 将验收证据保存到忽略目录，避免把宿主状态推送到公开仓库 */
-const report = {date: '2026-10-11', version: '0.1.0', vault, note: path, checks};
+const report = {date: new Intl.DateTimeFormat('sv-SE', {timeZone: 'Asia/Shanghai'}).format(new Date()), version: '0.1.0', vault, note: path, complete: skipped.length === 0, checks, skipped};
 await mkdir('.runtime-test', {recursive: true});
 await writeFile('.runtime-test/runtime.json', JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report, null, 2));
