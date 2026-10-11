@@ -1,0 +1,13 @@
+.loose-json-editor-action { float: right; margin-inline-start: 1rem; margin-inline-end: 76px; }
+.loose-json-format-button { font-size: var(--font-smallest); padding: 2px 8px; min-height: 28px; cursor: pointer; }
+.is-mobile .loose-json-format-button { min-height: 36px; }
+.markdown-rendered pre.loose-json-code-block { position: relative; }
+.loose-json-reading-action { position: absolute; top: 8px; right: 48px; z-index: 1; }
+.loose-json-modal { width: min(960px, 92vw); }
+.loose-json-modal pre { white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; max-height: 300px; overflow: auto; background: var(--background-secondary); padding: 12px; font-family: var(--font-monospace); }
+.loose-json-change { border: 1px solid var(--background-modifier-border); padding: 12px; border-radius: 8px; margin-block: 12px; }
+.loose-json-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.loose-json-comparison pre { margin: 0; }
+.loose-json-warning { color: var(--text-warning); }
+.loose-json-actions { display: flex; gap: 8px; justify-content: flex-end; position: sticky; bottom: 0; background: var(--background-primary); padding-block: 12px; }
+@media (max-width: 600px) { .loose-json-comparison { grid-template-columns: 1fr; } .loose-json-format-button { min-height: 36px; } }
