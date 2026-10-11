@@ -1,0 +1,24 @@
+docs/validation.md
+  s_bab663aecd558e::t_d1597d1a0cf876 33-34
+README.md
+  s_bab663aecd558e::t_d1597d1a0cf876 83
+scripts/verify-obsidian.mjs
+  s_bab663aecd558e::t_76c7d21d07b13f 25-29
+  s_bab663aecd558e::t_d1597d1a0cf876 13-14,119-130,133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "a845857d99ec250f465c3258a68c86da866a4ab7",
+  "prompts": {},
+  "sessions": {
+    "s_bab663aecd558e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12a51-9cd0-7ee2-8847-d046825b408b",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "dingxinyi.2 <dingxinyi.2@jd.com>"
+    }
+  }
+}
