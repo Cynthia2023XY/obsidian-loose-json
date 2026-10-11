@@ -1,4 +1,10 @@
-.loose-json-editor-action { float: right; margin-inline-start: 1rem; margin-inline-end: 76px; }
+/* 仅在本插件提供操作的围栏行，让原生标注参与排布，按钮紧邻其左侧。 */
+.markdown-source-view .cm-line:has(.loose-json-editor-action) .code-block-flair {
+  position: static;
+  float: right;
+  margin-inline-start: 8px;
+}
+.loose-json-editor-action { float: right; margin-inline-start: 8px; }
 .loose-json-format-button { font-size: var(--font-smallest); padding: 2px 8px; min-height: 28px; cursor: pointer; }
 .is-mobile .loose-json-format-button { min-height: 36px; }
 .markdown-rendered pre.loose-json-code-block { position: relative; }
