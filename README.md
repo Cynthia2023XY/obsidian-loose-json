@@ -14,7 +14,7 @@ An offline JSON tool for Obsidian developers reading API payloads and logs. Form
 
 ## Installation
 
-A Community Directory entry has been registered and is awaiting automated validation. Until it is published, use the GitHub release or BRAT to install.
+Install **Loose JSON** from Settings → Community plugins → Browse, or use the [Community Directory listing](https://community.obsidian.md/plugins/loose-json).
 
 Download `main.js`, `manifest.json`, and `styles.css` from a release, place them in `<vault>/.obsidian/plugins/loose-json/`, then enable **Loose JSON** in Settings → Community plugins. Keep the included license notices alongside distributed copies. For BRAT, add `Cynthia2023XY/obsidian-loose-json`.
 

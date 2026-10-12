@@ -44,4 +44,8 @@
 
 Release：https://github.com/Cynthia2023XY/obsidian-loose-json/releases/tag/0.2.0
 
-Community Directory 已注册并识别 `0.2.0`，已排队自动审查。“No release matches your manifest version” 已解决。记录此状态时，公开页面安装按钮仍禁用，不能视为已经可从市场安装。
+Community Directory 已识别 `0.2.0`，自动审查状态为 `Completed`，公开页面评级为 `Review Satisfactory`，`Add to Obsidian` 安装入口已启用。“No release matches your manifest version” 已解决。
+
+目录审查确认：无可疑网络请求、无已知漏洞依赖、无代码混淆；从源码重新构建的 `main.js` 与 Release 附件逐字节一致。非阻断项为 `createElement` 和 `:has` 警告，以及构建溯源证明、额外许可附件、剪贴板使用的建议；剪贴板仅写结果的行为已经在 README 披露。
+
+公开目录：https://community.obsidian.md/plugins/loose-json
