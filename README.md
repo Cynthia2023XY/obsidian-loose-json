@@ -14,9 +14,9 @@ An offline JSON tool for Obsidian developers reading API payloads and logs. Form
 
 ## Installation
 
-This plugin has not been submitted to the Obsidian Community directory.
+A Community Directory entry has been registered and is awaiting automated validation. Until it is published, use the GitHub release or BRAT to install.
 
-Download `main.js`, `manifest.json`, and `styles.css` from a release, place them in `<vault>/.obsidian/plugins/loose-json/`, then enable **Loose JSON** in Settings → Community plugins. Keep the included license notices alongside distributed copies. BRAT can install the repository once a GitHub release is available.
+Download `main.js`, `manifest.json`, and `styles.css` from a release, place them in `<vault>/.obsidian/plugins/loose-json/`, then enable **Loose JSON** in Settings → Community plugins. Keep the included license notices alongside distributed copies. For BRAT, add `Cynthia2023XY/obsidian-loose-json`.
 
 ## Commands
 
@@ -74,6 +74,12 @@ After selecting `/data`, its value becomes an object. Ordinary strings, URLs, pa
 - Reading mode refuses ambiguous source locations. Embedded blocks open their actual source note rather than modifying the host note.
 - Default processing limit: 1 MiB, configurable from 0.1 to 10 MiB; maximum structural depth: 128. Inputs containing arbitrary Markdown or invalid log syntax cannot always be inferred correctly; preview document changes before applying.
 - Inner stringified JSON must be strict JSON by default. A setting explicitly allows JSON5 inside strings.
+
+## Privacy and compatibility
+
+All formatting and conversion run locally on your device. No network requests, accounts, payments, advertisements, or telemetry are used. The plugin only accesses notes and its settings within the vault; it does not access files outside the vault. It never reads the clipboard. Copy commands and copy buttons write only the result you request.
+
+The declared API minimum is Obsidian 1.8.7, the version that introduced `getLanguage`. Desktop behavior has been verified on Obsidian 1.14.4. The runtime uses Web APIs and does not require Node.js or Electron APIs. Native mobile devices and the minimum app version have not yet been tested; see the validation notes for the exact test coverage.
 
 ## Development
 
