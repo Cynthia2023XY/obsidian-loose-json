@@ -60,6 +60,11 @@ describe('bounded strict JSON repair', () => {
     expect(output.text.match(/"a"/g)).toHaveLength(2);
     expect(output.warnings.some(item => item.code === 'repair.comments')).toBe(true);
   });
+  it('preserves the sign of JSON5 hexadecimal negative zero', () => {
+    // 修复不得因为整数转换丢掉负零的可观察语义。
+    const output = repairCandidates('{value:-0x0}').candidates[0];
+    expect(Object.is(JSON.parse(output.text).value, -0)).toBe(true);
+  });
   it.each(['{a:NaN}', '{a:Infinity}', '{a:-Infinity}'])('rejects lossy strict JSON conversion %s', source => {
     // 生成结果，用于检查复制形态及数据保持。
     const output = repairCandidates(source);

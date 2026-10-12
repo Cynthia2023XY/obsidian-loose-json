@@ -4,9 +4,9 @@
 
 ## 自动验证
 
-`npm ci`、`npm run lint`（0 错误、0 警告）、`npm run test:coverage`、`npm run package` 均通过。60 项回归测试覆盖真实 CodeMirror 生命周期、JSON/JSON5、属性和对象项片段、多候选日志、null 出参、截断 token 保持、日志日期恢复、有界修复、大整数、重复字段、十六进制精确转换、i18n，以及引用/列表/CRLF/长围栏生成。干净安装审计未发现已报告漏洞。
+`npm ci`、`npm run lint`（0 错误、0 警告）、`npm run test:coverage`、`npm run package` 均通过。61 项回归测试覆盖真实 CodeMirror 生命周期、JSON/JSON5、属性和对象项片段、多候选日志、null 出参、截断 token 保持、日志日期恢复、有界修复、大整数、重复字段、十六进制精确转换、i18n，以及引用/列表/CRLF/长围栏生成。干净安装审计未发现已报告漏洞。
 
-核心覆盖率：语句 95.54%、分支 90.18%、函数 96.61%、行 99.27%。这是核心模块覆盖率，不代表整个 Obsidian UI。
+核心覆盖率：语句 95.54%、分支 90.22%、函数 96.61%、行 99.27%。这是核心模块覆盖率，不代表整个 Obsidian UI。
 
 ## 实际 Obsidian 验收
 

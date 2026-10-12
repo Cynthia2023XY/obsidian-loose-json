@@ -17,7 +17,11 @@ function strict(node: DataNode): string {
   if (/Infinity|NaN/.test(node.raw)) throw new DataError('error.nonfinite');
   // 十六进制转换也使用整数文本，不经过 Number。
   const hex = node.raw.match(/^([+-]?)(0[xX][\da-fA-F]+)$/);
-  if (hex) return (hex[1] === '-' ? -BigInt(hex[2]) : BigInt(hex[2])).toString();
+  if (hex) {
+    // 整数精确转换同时保留负零语义，不能被 BigInt 的零吞掉符号。
+    const integer = BigInt(hex[2]);
+    return hex[1] === '-' ? integer === 0n ? '-0' : (-integer).toString() : integer.toString();
+  }
   // JSON5 的小数点和正号只需局部文本归一化。
   return node.raw.replace(/^\+/, '').replace(/^(-?)\./, '$10.').replace(/\.(?=[eE]|$)/, '.0');
 }
