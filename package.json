@@ -1,10 +1,10 @@
 {
   "name": "obsidian-loose-json",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Offline loose JSON formatting, log extraction and data conversion for Obsidian.",
   "private": true,
   "license": "MIT",
-  "author": "Cynthia2023XY",
+  "author": "Cynthia Ding",
   "scripts": {
     "dev": "node esbuild.config.mjs --watch",
     "typecheck": "tsc --noEmit",

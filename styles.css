@@ -5,8 +5,11 @@
   margin-inline-start: 8px;
 }
 .loose-json-editor-action { float: right; margin-inline-start: 8px; }
-.loose-json-format-button { font-size: var(--font-smallest); padding: 2px 8px; min-height: 28px; cursor: pointer; }
-.is-mobile .loose-json-format-button { min-height: 36px; }
+.loose-json-format-button { font-family: var(--font-interface); font-size: var(--font-smallest); line-height: 1.2; padding: 2px 8px; height: 24px; min-height: 24px; border-radius: var(--radius-s); border: 1px solid transparent; color: var(--text-muted); background: var(--background-secondary); box-shadow: none; cursor: pointer; }
+.loose-json-format-button:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+.loose-json-format-button:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 2px; }
+.markdown-source-view .cm-line:has(.loose-json-editor-action) .code-block-flair { font-family: var(--font-interface); font-size: var(--font-smallest); line-height: 1.2; padding: 2px 8px; height: 24px; min-height: 24px; border: 1px solid transparent; border-radius: var(--radius-s); background: var(--background-secondary); box-sizing: border-box; }
+.is-mobile .loose-json-format-button, .is-mobile .cm-line:has(.loose-json-editor-action) .code-block-flair { min-height: 36px; }
 .markdown-rendered pre.loose-json-code-block { position: relative; }
 .loose-json-reading-action { position: absolute; top: 8px; right: 48px; z-index: 1; }
 .loose-json-modal { width: min(960px, 92vw); }

@@ -1,10 +1,10 @@
 {
   "id": "loose-json",
   "name": "Loose JSON",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "minAppVersion": "1.8.7",
-  "description": "Format loose JSON and log fragments, copy JavaScript literals, and decode stringified JSON fields offline.",
-  "author": "Cynthia2023XY",
+  "description": "Format loose JSON, copy JavaScript values, decode stringified fields, repair JSON, and extract log data offline.",
+  "author": "Cynthia Ding",
   "authorUrl": "https://github.com/Cynthia2023XY",
   "isDesktopOnly": false
 }

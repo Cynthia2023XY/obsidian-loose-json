@@ -53,8 +53,12 @@ async function applyPreview() {
   evaluate('document.querySelector(".loose-json-actions .mod-cta").click(); "applied"');
 }
 
+/** 验收前备份全部设置，失败时也恢复，避免留下测试偏好 */
+const savedSettings = state('app.plugins.plugins["loose-json"].settings');
+try {
+evaluate('Object.assign(app.plugins.plugins["loose-json"].settings,{language:"zh",previewDocument:true,previewDecode:true,previewJs:true,buttons:true}); app.plugins.plugins["loose-json"].saveSettings();"defaults"');
 assert.equal(state('app.vault.getName()'), vault);
-assert.equal(state('app.plugins.plugins["loose-json"].manifest.version'), '0.1.0');
+assert.equal(state('app.plugins.plugins["loose-json"].manifest.version'), '0.2.0');
 evaluate(`(async()=>{ /* 本次新建的独立样例 */ const file=await app.vault.create(${JSON.stringify(path)},${JSON.stringify(source)}); await app.workspace.getLeaf(false).openFile(file,{state:{mode:"source"}});})()`);
 await until('app.workspace.getActiveFile()?.path', value => value === path);
 await until('document.querySelectorAll(".loose-json-editor-action").length', value => value === 2);
@@ -112,8 +116,75 @@ evaluate('/* 当前验收插件 */ const plugin=app.plugins.plugins["loose-json"
 await until('document.querySelectorAll(".loose-json-editor-action").length', value => value === 0);
 evaluate('/* 恢复默认按钮配置 */ const plugin=app.plugins.plugins["loose-json"];plugin.settings.buttons=true;plugin.saveSettings(); "show"');
 await until('document.querySelectorAll(".loose-json-editor-action").length', value => value === 2);
-assert.equal(state('app.setting.pluginTabs.find(tab=>tab.id==="loose-json").getSettingDefinitions().length'), 5);
-checks.push('按钮设置即时更新；五项设置可被宿主搜索');
+assert.equal(state('app.setting.pluginTabs.find(tab=>tab.id==="loose-json").getSettingDefinitions().length'), 9);
+checks.push('按钮设置即时更新；九项设置可被宿主搜索');
+
+// 新入口处理日志和属性片段，多个候选不会自动合并。
+editor('editor.setValue("```json\\n26-10-10.17:10:00 request={\\\"a\\\":1}, response=null\\n```\\n");editor.setCursor({line:1,ch:0})');
+command('copy-javascript');
+await until('document.querySelectorAll(".loose-json-change").length', value => value === 2);
+assert.ok(state('document.querySelector(".loose-json-modal").textContent').includes('response'));
+closePreviews();
+checks.push('日志转 JS 两个候选含 null 出参，原标签保留');
+
+// 拆块默认插入原块外；原日志仍在，整个插入可单次撤销。
+const originalLog = state('app.workspace.activeLeaf.view.editor.getValue()');
+command('extract-json');
+await until('document.querySelector(".loose-json-modal")?.textContent', value => value?.includes('request'));
+evaluate('Array.from(document.querySelectorAll(".loose-json-modal button")).find(button=>/插入|Insert/.test(button.textContent)).click();"inserted"');
+await until('app.workspace.activeLeaf.view.editor.getValue()', value => (value.match(/```json/g) ?? []).length === 3);
+assert.ok(state('app.workspace.activeLeaf.view.editor.getValue()').startsWith(originalLog));
+editor('editor.undo()');
+assert.equal(state('app.workspace.activeLeaf.view.editor.getValue()'), originalLog);
+checks.push('日志拆块保留原文，在围栏外生成入参和 null 出参，单次撤销');
+
+// 延迟加载的候选仍保留默认结果，批量插入不得出现 undefined。
+const manyLogs = '```json\n' + Array.from({length: 51}, (_, index) => `request={"item":${index}}`).join('\n') + '\n```\n';
+editor(`editor.setValue(${JSON.stringify(manyLogs)});editor.setCursor({line:1,ch:0})`);
+command('extract-json');
+await until('document.querySelectorAll(".loose-json-change").length', value => value === 50);
+evaluate('Array.from(document.querySelectorAll(".loose-json-modal button")).find(button=>/插入|Insert/.test(button.textContent)).click();"inserted"');
+await until('app.workspace.activeLeaf.view.editor.getValue()', value => (value.match(/```json/g) ?? []).length === 52);
+assert.ok(state('app.workspace.activeLeaf.view.editor.getValue()').includes('"item": 50'));
+assert.ok(!state('app.workspace.activeLeaf.view.editor.getValue()').includes('undefined'));
+editor('editor.undo()');
+assert.equal(state('app.workspace.activeLeaf.view.editor.getValue()'), manyLogs);
+checks.push('51 个候选分页展示，未加载项仍正确插入，批量单次撤销');
+
+// 截断排版不会补闭合，独立修复可生成严格 JSON。
+editor('editor.setValue("```json\\n{id:9223372036854775807,items:[1,2,\\n```\\n");editor.setCursor({line:1,ch:0})');
+command('repair-json');
+await until('document.querySelector(".loose-json-modal pre")?.textContent', value => value?.includes('9223372036854775807'));
+assert.ok(state('document.querySelector(".loose-json-modal").textContent').includes('2'));
+closePreviews();
+checks.push('截断修复预览成功，超大整数文本保持');
+
+// 关闭普通预览直接写入，并通过单次撤销恢复。
+evaluate('app.plugins.plugins["loose-json"].settings.previewDocument=false;"configured"');
+editor(`editor.setValue(${JSON.stringify(source)});editor.setCursor({line:1,ch:0})`);
+command('format-document');
+await until('app.workspace.activeLeaf.view.editor.getValue()', value => value.includes('response={\n'));
+assert.equal(state('!!document.querySelector(".loose-json-modal")'), false);
+editor('editor.undo()');
+assert.equal(state('app.workspace.activeLeaf.view.editor.getValue()'), source);
+evaluate('app.plugins.plugins["loose-json"].settings.previewDocument=true;app.plugins.plugins["loose-json"].settings.previewDecode=false;"configured"');
+editor('editor.setCursor({line:8,ch:0})');
+command('decode-fields');
+await until('app.workspace.activeLeaf.view.editor.getValue()', value => value.includes('"data":{\n'));
+assert.equal(state('!!document.querySelector(".loose-json-modal")'), false);
+editor('editor.undo()');
+evaluate('app.plugins.plugins["loose-json"].settings.previewDecode=true;"restored"');
+checks.push('全文和字段转换可关闭预览，直接应用且可撤销');
+
+// 语言实时更新按钮和新窗口，不更改日志标签。
+evaluate('app.plugins.plugins["loose-json"].settings.language="en";app.plugins.plugins["loose-json"].saveSettings();"english"');
+await until('document.querySelector(".loose-json-format-button")?.textContent', value => value === 'Format');
+command('format-document');
+await until('document.querySelector(".loose-json-modal")?.textContent', value => value?.includes('Document formatting'));
+closePreviews();
+checks.push('英文按钮及全文预览文案生效');
+evaluate('app.plugins.plugins["loose-json"].settings.language="zh";app.plugins.plugins["loose-json"].saveSettings();"restored"');
+await until('document.querySelector(".loose-json-format-button")?.textContent', value => value === '格式化');
 
 // 阅读模式按钮核验源位置后打开编辑器应用，不直接写 DOM 文本。
 if (state('document.visibilityState') === 'visible') {
@@ -130,7 +201,12 @@ if (state('document.visibilityState') === 'visible') {
 }
 
 /** 将验收证据保存到忽略目录，避免把宿主状态推送到公开仓库 */
-const report = {date: new Intl.DateTimeFormat('sv-SE', {timeZone: 'Asia/Shanghai'}).format(new Date()), version: '0.1.0', vault, note: path, complete: skipped.length === 0, checks, skipped};
+const report = {date: new Intl.DateTimeFormat('sv-SE', {timeZone: 'Asia/Shanghai'}).format(new Date()), version: '0.2.0', vault, note: path, complete: skipped.length === 0, checks, skipped};
 await mkdir('.runtime-test', {recursive: true});
 await writeFile('.runtime-test/runtime.json', JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report, null, 2));
+
+} finally {
+  closePreviews();
+  evaluate(`Object.assign(app.plugins.plugins["loose-json"].settings,${JSON.stringify(savedSettings)});app.plugins.plugins["loose-json"].saveSettings();"settings restored"`);
+}

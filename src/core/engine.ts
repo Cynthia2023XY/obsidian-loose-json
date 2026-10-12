@@ -1,49 +1,16 @@
+import {DataError, errorDiagnostic, type Diagnostic} from '../i18n';
+import {structureRange} from './candidates';
 import {blockBody, codeBlocks, proseRanges, type Range} from './markdown';
 import {decodeString, IDENTIFIER, keyName, layout, parseData, tokenize, type DataNode} from './syntax';
 
 /** 用户可配置的排版与转换行为 */
 export interface Options {indent: string; compactArrays: boolean; allowInnerJson5: boolean; maxBytes: number}
 /** 预览和应用共享的文本修改项 */
-export interface Change extends Range {before: string; after: string; label: string; warning?: string}
+export interface Change extends Range {before: string; after: string; label: string; warning?: string; warningCode?: Diagnostic; location?: Diagnostic}
 /** 扫描结果，区分修改项与跳过诊断 */
-export interface Plan {changes: Change[]; skipped: string[]}
+export interface Plan {changes: Change[]; skipped: Diagnostic[]}
 /** 首版默认保持每项数组换行、严格识别内部字符串化 JSON */
 export const DEFAULT_OPTIONS: Options = {indent: '  ', compactArrays: false, allowInnerJson5: false, maxBytes: 1024 * 1024};
-
-/** 在字符串和注释状态下匹配最外层括号，损坏输入不推断闭合位置 */
-function balancedEnd(source: string, start: number): number {
-  // 结构层级和局部词法状态。
-  const stack: string[] = [];
-  // 当前字符串的引号类型。
-  let quote = '';
-  // 当前注释的词法状态。
-  let comment = '';
-  // 逐字符扫描的当前位置。
-  for (let i = start; i < source.length; i++) {
-    // 当前字符，用于推进字符串和结构状态。
-    const char = source[i];
-    if (comment === '//') {if (char === '\n') comment = ''; continue;}
-    if (comment === '/*') {if (source.startsWith('*/', i)) {comment = ''; i++;} continue;}
-    if (quote) {
-      if (char === '\\') {i++; if (source[i] === '\r' && source[i + 1] === '\n') i++; continue;}
-      if (char === quote) quote = '';
-      else if (char === '\n' || char === '\r') return -1;
-      continue;
-    }
-    if (char === '"' || char === "'") {quote = char; continue;}
-    if (source.startsWith('//', i) || source.startsWith('/*', i)) {comment = source.slice(i, i + 2); i++; continue;}
-    if (char === '{' || char === '[') {
-      if (stack.length > 128) return -1;
-      stack.push(char === '{' ? '}' : ']');
-    } else if (char === '}' || char === ']') {
-      if (stack.pop() !== char) return -1;
-      if (!stack.length) return i + 1;
-    }
-    // 新日志记录开始时终止截断片段，避免吞掉下一条记录。
-    if (char === '\n' && /^\d{4}-\d{2}-\d{2}[ T]\d{2}:/.test(source.slice(i + 1, i + 24))) return -1;
-  }
-  return -1;
-}
 
 /** 识别日志中的完整可信片段，损坏片段仅在显式目标中允许排版 */
 export function fragmentPlan(source: string, options = DEFAULT_OPTIONS, loose = false): Plan {
@@ -64,11 +31,13 @@ export function fragmentPlan(source: string, options = DEFAULT_OPTIONS, loose = 
     if (char === '"' || (char === "'" && !/\w/.test(source[i - 1] ?? ''))) {quote = char; continue;}
     if (char !== '{' && char !== '[') continue;
     // 当前最外层结构的合法结束位置，无法确定时不修改。
-    const end = balancedEnd(source, i);
+    const range = structureRange(source, i);
+    // 宽松目标允许保留未闭合结构，全文扫描仍要求完整范围。
+    const end = range.complete || loose ? range.end : -1;
     if (end < 0) {
-      plan.skipped.push(`字符 ${i + 1}：结构截断或括号不匹配`);
+      plan.skipped.push({code: 'diagnostic.at', params: {location: String(i + 1)}, cause: {code: 'error.truncated'}});
       // 只在明确的新日志记录处恢复，避免修改截断外层中的嵌套对象。
-      const nextRecord = source.slice(i + 1).match(/\n\d{4}-\d{2}-\d{2}[ T]\d{2}:/);
+      const nextRecord = source.slice(i + 1).match(/\n\s*(?:\d{4}|\d{2})-\d{2}-\d{2}[. T]\d{2}:/);
       if (!nextRecord || nextRecord.index === undefined) break;
       i += nextRecord.index + 1;
       continue;
@@ -79,17 +48,17 @@ export function fragmentPlan(source: string, options = DEFAULT_OPTIONS, loose = 
     let valid = false;
     try {parseData(before); valid = true;} catch { /* 损坏对象仅供显式宽松预览。 */ }
     // 损坏片段是否仍具有对象属性结构。
-    const jsonLike = char === '{' && tokenize(before).some(token => token.raw === ':');
+    const jsonLike = char === '{' ? tokenize(before, loose).some(token => token.raw === ':') : !range.complete && /^\[\s*(?:[\d+\-.]|true\b|false\b|null\b|["'])/.test(before);
     if (!valid && (!loose || !jsonLike)) {
       // 日志等级及线程名是普通文本，不作为损坏 JSON 报警。
-      if (jsonLike) plan.skipped.push(`字符 ${i + 1}：无法解析，已跳过`);
+      if (jsonLike) plan.skipped.push({code: 'warning.invalid', params: {offset: i + 1}});
       i = end - 1; continue;
     }
     try {
       // 保留数据含义的目标文本。
-      const after = layout(before, options.indent, options.compactArrays);
-      if (before !== after) plan.changes.push({from: i, to: end, before, after, label: `字符 ${i + 1}`, warning: valid ? undefined : '仅改善排版，语法仍可能无效'});
-    } catch (error) {plan.skipped.push(`字符 ${i + 1}：${String(error)}`);}
+      const after = layout(before, options.indent, options.compactArrays, loose && !range.complete);
+      if (before !== after) plan.changes.push({from: i, to: end, before, after, label: `字符 ${i + 1}`, warning: valid ? undefined : '仅改善排版，语法仍可能无效', warningCode: valid ? undefined : {code: 'warning.partial'}, location: {code: 'location.offset', params: {offset: i + 1}}});
+    } catch (error) {plan.skipped.push({code: 'diagnostic.at', params: {location: String(i + 1)}, cause: errorDiagnostic(error)});}
     i = end - 1;
   }
   return plan;
@@ -105,7 +74,7 @@ export function applyChanges(source: string, changes: Change[]): string {
   let boundary = 0;
   // 每项已经过用户选择的修改都须独立核验原范围。
   for (const change of sorted) {
-    if (change.from < boundary || change.to > source.length || change.from > change.to || source.slice(change.from, change.to) !== change.before) throw new Error('目标内容已改变，请重新运行命令');
+    if (change.from < boundary || change.to > source.length || change.from > change.to || source.slice(change.from, change.to) !== change.before) throw new DataError('error.stale');
     pieces.push(source.slice(boundary, change.from), change.after);
     boundary = change.to;
   }
@@ -116,7 +85,7 @@ export function applyChanges(source: string, changes: Change[]): string {
 /** 规划文档修改，保护非 JSON 内容及不支持的 Markdown 容器 */
 export function documentPlan(source: string, options = DEFAULT_OPTIONS): Plan {
   // 超限输入不进入扫描器，所有算法也在独立工作线程执行。
-  if (new TextEncoder().encode(source).length > options.maxBytes) throw new Error('文档超过处理上限，请选择较小片段或调整高级设置');
+  if (new TextEncoder().encode(source).length > options.maxBytes) throw new DataError('error.limit');
   // 文档中已经可靠定位的 fenced 代码块。
   const blocks = codeBlocks(source);
   // 行起点只计算一次，大量日志片段不反复切分整篇前缀。
@@ -141,21 +110,21 @@ export function documentPlan(source: string, options = DEFAULT_OPTIONS): Plan {
   // 当前操作所属的真实代码块。
   for (const block of blocks) {
     if (!['json', ''].includes(block.language)) continue;
-    if (!block.supported) {result.skipped.push(`第 ${block.line + 1} 行：围栏或容器无法可靠定位`); continue;}
+    if (!block.supported) {result.skipped.push({code: 'diagnostic.at', params: {location: String(block.line + 1)}, cause: {code: 'error.container'}}); continue;}
     // 按源位置规划的修改候选与跳过原因。
     const plan = fragmentPlan(block.content, options);
-    result.skipped.push(...plan.skipped.map(message => `第 ${block.line + 1} 行：${message}`));
+    result.skipped.push(...plan.skipped.map(message => ({code: 'diagnostic.at', params: {location: String(block.line + 1)}, cause: message})));
     if (plan.changes.length) {
       // 保留数据含义的目标文本。
       const after = blockBody(block, applyChanges(block.content, plan.changes));
-      result.changes.push({from: block.bodyFrom, to: block.bodyTo, before: source.slice(block.bodyFrom, block.bodyTo), after, label: `第 ${block.line + 1} 行代码块`});
+      result.changes.push({from: block.bodyFrom, to: block.bodyTo, before: source.slice(block.bodyFrom, block.bodyTo), after, label: `第 ${block.line + 1} 行代码块`, location: {code: 'location.line', params: {line: block.line + 1}}});
     }
   }
   // 当前允许处理的源范围。
   for (const range of proseRanges(source, blocks)) {
     // 按源位置规划的修改候选与跳过原因。
     const plan = fragmentPlan(source.slice(range.from, range.to), options);
-    result.changes.push(...plan.changes.map(change => ({...change, from: range.from + change.from, to: range.from + change.to, label: `第 ${lineNumber(range.from + change.from)} 行日志`})));
+    result.changes.push(...plan.changes.map(change => ({...change, from: range.from + change.from, to: range.from + change.to, label: `第 ${lineNumber(range.from + change.from)} 行日志`, location: {code: 'location.line', params: {line: lineNumber(range.from + change.from)}}})));
     result.skipped.push(...plan.skipped);
   }
   result.changes.sort((a, b) => a.from - b.from);
@@ -171,7 +140,7 @@ function singleQuote(value: string): string {
 export function javascriptLiteral(source: string, options = DEFAULT_OPTIONS): {text: string; warnings: string[]} {
   // 解析器只接受对象/数组，字符串仅用于值转换。
   const root = parseData(source);
-  if (!['object', 'array'].includes(root.kind)) throw new Error('请选择一个完整对象或数组');
+  if (!['object', 'array'].includes(root.kind)) throw new DataError('error.literal');
   // 保持原始数值 token 的字段与字符串修改。
   const edits: Change[] = [];
   // 需要向用户说明的类型或求值风险。
@@ -244,7 +213,7 @@ export function decodePlan(source: string, options = DEFAULT_OPTIONS): Plan {
         const prefix = source.slice(startOfLine, node.start).match(/^[\t ]*/)?.[0] ?? '';
         // 保留数据含义的目标文本。
         const after = decoded.text.split(/\r?\n/).map((line, index) => index ? prefix + line : line).join(source.includes('\r\n') ? '\r\n' : '\n');
-        result.changes.push({from: node.start, to: node.end, before: node.raw, after, label: `${path || '/'} · 字符 ${node.start + 1} · ${decoded.layers} 层解码`, warning: '字符串将变为对象或数组，原接口字段类型将改变'});
+        result.changes.push({from: node.start, to: node.end, before: node.raw, after, label: `${path || '/'} · 字符 ${node.start + 1} · ${decoded.layers} 层解码`, warning: '字符串将变为对象或数组，原接口字段类型将改变', warningCode: {code: 'warning.type'}, location: {code: 'location.field', params: {path: path || '/', offset: node.start + 1, layers: decoded.layers}}});
       }
     }
     node.entries.forEach(entry => visit(entry.value, path + '/' + keyName(entry.key).replace(/~/g, '~0').replace(/\//g, '~1')));

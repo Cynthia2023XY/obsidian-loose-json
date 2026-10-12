@@ -14,20 +14,25 @@ An offline JSON tool for Obsidian developers reading API payloads and logs. Form
 
 ## Installation
 
-This initial version has not been submitted to the Obsidian Community directory.
+This plugin has not been submitted to the Obsidian Community directory.
 
 Download `main.js`, `manifest.json`, and `styles.css` from a release, place them in `<vault>/.obsidian/plugins/loose-json/`, then enable **Loose JSON** in Settings → Community plugins. Keep the included license notices alongside distributed copies. BRAT can install the repository once a GitHub release is available.
 
 ## Commands
 
-The initial UI and command names are in Chinese:
+The interface supports Chinese and English, following Obsidian by default. Choose an explicit language in settings. Buttons and new dialogs update immediately; re-enable the plugin to update command names without changing IDs or hotkeys.
 
 | Command | Usage |
 | --- | --- |
-| 格式化 JSON 代码块或选区 | Select text or place the cursor in a JSON/unlabelled block. Valid fragments are formatted in place. Damaged but balanced JSON-like objects require preview. |
+| 格式化 JSON 代码块或选区 | Select text or place the cursor in a JSON/unlabelled block. Valid fragments are formatted in place. Incomplete JSON-like objects and arrays can be laid out without completing missing data; damaged content requires review. |
 | 格式化当前文档中的 JSON | Review detected JSON fragments and choose changes to apply. YAML frontmatter, inline code, Markdown links and other code-block languages are protected. |
-| 复制为 JS 对象字面量 | Select one complete object/array or use the current block. Preview and copy; the original note is unchanged. |
+| 复制为 JavaScript | Complete values, property fragments and log-wrapped data are supported. Choose a candidate and automatic/object/property output; the original note is unchanged. |
 | 将字符串化 JSON 字段转为对象 | Review fields whose string values contain JSON objects/arrays, then apply selected changes. This changes their data types. |
+| 修复为严格 JSON | Review safe JSON5 normalization and structural closure. Copy or insert a separate result by default; replacing the source is explicit. Missing strings or field values are never invented. |
+| 提取日志 JSON 为代码块 | Extract outer data values, including clearly labelled `null` responses, into separate blocks in source order. Insertion preserves original logs and stays outside the source fence. |
+| 查看上次处理诊断 | Inspect skipped fragments and conversion warnings locally. |
+
+Document formatting, field decoding and JS copying have independent preview settings, enabled by default. Disabling document/decode previews applies valid changes directly; disabling JS preview copies only a unique result. Multiple JS candidates still require selection. Repair and extraction always require review. The document preview includes a direct link to preview settings.
 
 Valid direct formatting can be undone once. Document and decode changes are also applied in one editor transaction. If a note changes while a preview is open, rerun the command; stale previews are never written.
 
@@ -62,8 +67,8 @@ After selecting `/data`, its value becomes an object. Ordinary strings, URLs, pa
 ## Supported input and limits
 
 - Strict JSON, plus common JSON5 syntax: comments, single quotes, unquoted/Unicode keys, trailing commas, hexadecimal numbers, Infinity and NaN.
-- Formatting does not repair missing punctuation or truncated data. Document scanning skips malformed structures; explicit JSON-block formatting can preview balanced damaged objects.
-- JS conversion requires a complete object/array and does not accept functions, expressions or variable references. Computed `['__proto__']` keys preserve data-property behavior.
+- Formatting preserves token text, including unfinished strings/comments; it never adds brackets or values. Document scanning remains conservative and recovers at known two-digit/four-digit year log boundaries. Repair is separate, preserves numeric tokens and duplicate keys, and refuses lossy NaN/Infinity conversion to strict JSON.
+- JS conversion supports complete values, property lists, trailing separator commas and multiple outer log candidates. It does not accept functions, expressions or variable references. Computed `['__proto__']` keys preserve data-property behavior.
 - Large integer text is preserved, but evaluating a generated JS literal as a Number can still lose precision; use BigInt where your application requires it. Duplicate JS keys still follow JavaScript's last-value behavior.
 - Backtick and tilde fences, CRLF, ordinary list and blockquote containers are supported. Ambiguous or incomplete containers are skipped.
 - Reading mode refuses ambiguous source locations. Embedded blocks open their actual source note rather than modifying the host note.
@@ -82,7 +87,7 @@ npm run package
 
 Runtime verification in the isolated Chinese test vault is available via `node scripts/verify-obsidian.mjs`; it creates a uniquely named synthetic note. Keep that vault window visible for reading-mode checks. Hidden-window skips are reported explicitly. See [validation notes](docs/validation.md) for tested behavior and remaining release checks.
 
-Copy the files in `dist/loose-json-0.1.0/` into a test vault. `npm run dev` rebuilds on source changes; it does not start an HTTP server. Reload the plugin after rebuilding.
+Copy the files in `dist/loose-json-0.2.0/` into a test vault. `npm run dev` rebuilds on source changes; it does not start an HTTP server. Reload the plugin after rebuilding.
 
 The core tokenizer, range scanner, parser, and formatter were written independently. Formatting changes whitespace between tokens rather than parsing and reserializing numeric values. Obsidian and CodeMirror are external host dependencies; JSON5 is bundled solely for string/key decoding.
 
@@ -90,4 +95,4 @@ The core tokenizer, range scanner, parser, and formatter were written independen
 
 Inspired by the practical workflow of [Simple Code Formatter](https://github.com/wiop93256/Simple-Code-Formmater), with thanks to its author. No source or assets were copied from that plugin.
 
-MIT © 2026 Cynthia2023XY. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT © 2026 Cynthia Ding (Cynthia2023XY). See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

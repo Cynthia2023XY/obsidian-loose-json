@@ -114,3 +114,12 @@ export function proseRanges(source: string, blocks = codeBlocks(source)): Range[
   if (cursor < source.length) ranges.push({from: cursor, to: source.length});
   return ranges;
 }
+
+/** 生成独立数据围栏，保护内容中的反引号与原有容器换行风格 */
+export function generatedBlocks(items: {text: string; label: string}[], prefix = '', eol = '\n'): string {
+  return items.map(item => {
+    // 围栏长度大于数据中任何连续反引号，避免截断输出。
+    const fence = '`'.repeat(Math.max(3, ...(item.text.match(/`+/g) ?? []).map(value => value.length + 1)));
+    return (item.label ? item.label + '\n' : '') + fence + 'json\n' + item.text + '\n' + fence;
+  }).join('\n\n').split(/\r?\n/).map(line => prefix + line).join(eol);
+}
