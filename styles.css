@@ -8,8 +8,29 @@
 .loose-json-format-button { font-family: var(--font-interface); font-size: var(--font-smallest); line-height: 1.2; padding: 2px 8px; height: 24px; min-height: 24px; border-radius: var(--radius-s); border: 1px solid transparent; color: var(--text-muted); background: var(--background-secondary); box-shadow: none; cursor: pointer; }
 .loose-json-format-button:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
 .loose-json-format-button:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 2px; }
+/* 浮动按钮比原围栏行更高，为整颗按钮留出空间，防止下一行背景覆盖底角。 */
+.markdown-source-view .cm-line:has(.loose-json-editor-action) { min-height: 28px; }
+.markdown-source-view .cm-line .loose-json-editor-action {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  margin-block: 2px;
+}
+/* 编辑视图使用独立选择器，保持按钮底部圆角而不依赖阅读视图规则。 */
+.markdown-source-view .cm-line .loose-json-editor-action > .loose-json-format-button {
+  border-radius: 8px;
+  border: 1px solid var(--background-modifier-border);
+  margin: 0;
+}
+
 .markdown-source-view .cm-line:has(.loose-json-editor-action) .code-block-flair { font-family: var(--font-interface); font-size: var(--font-smallest); line-height: 1.2; padding: 2px 8px; height: 24px; min-height: 24px; border: 1px solid transparent; border-radius: var(--radius-s); background: var(--background-secondary); box-sizing: border-box; }
+/* 原生语言标注与操作按钮同样内缩，避免标注底角被下一行覆盖。 */
+.markdown-source-view .cm-line:has(.loose-json-editor-action) .code-block-flair {
+  margin-block: 2px;
+  border-radius: 8px;
+}
 .is-mobile .loose-json-format-button, .is-mobile .cm-line:has(.loose-json-editor-action) .code-block-flair { min-height: 36px; }
+.is-mobile .cm-line:has(.loose-json-editor-action) { min-height: 40px; }
 .markdown-rendered pre.loose-json-code-block,
 .markdown-source-view pre.loose-json-code-block { position: relative; }
 /* 原生代码块按钮规则会单独设置底角；在阅读和实时预览中明确覆盖四角。 */
@@ -67,4 +88,10 @@
 .loose-json-comparison pre { margin: 0; }
 .loose-json-warning { color: var(--text-warning); }
 .loose-json-actions { display: flex; gap: 8px; justify-content: flex-end; position: sticky; bottom: 0; background: var(--background-primary); padding-block: 12px; }
-@media (max-width: 600px) { .loose-json-comparison { grid-template-columns: 1fr; } .loose-json-format-button { min-height: 36px; } }
+@media (max-width: 600px) {
+  .loose-json-comparison { grid-template-columns: 1fr; }
+  .loose-json-format-button { min-height: 36px; }
+  /* 窄窗口按钮增高时，操作行和语言标注同步增高，保持底角可见。 */
+  .markdown-source-view .cm-line:has(.loose-json-editor-action) { min-height: 40px; }
+  .markdown-source-view .cm-line:has(.loose-json-editor-action) .code-block-flair { min-height: 36px; }
+}
