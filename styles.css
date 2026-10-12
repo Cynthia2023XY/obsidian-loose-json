@@ -24,8 +24,11 @@
 }
 
 .markdown-source-view .cm-line:has(.loose-json-editor-action) .code-block-flair { font-family: var(--font-interface); font-size: var(--font-smallest); line-height: 1.2; padding: 2px 8px; height: 24px; min-height: 24px; border: 1px solid transparent; border-radius: var(--radius-s); background: var(--background-secondary); box-sizing: border-box; }
-/* 原生语言标注与操作按钮同样内缩，避免标注底角被下一行覆盖。 */
+/* 标注采用与按钮相同的居中排布，统一文字基线并保留底部圆角。 */
 .markdown-source-view .cm-line:has(.loose-json-editor-action) .code-block-flair {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-block: 2px;
   border-radius: 8px;
 }
