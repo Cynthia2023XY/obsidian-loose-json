@@ -10,8 +10,56 @@
 .loose-json-format-button:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 2px; }
 .markdown-source-view .cm-line:has(.loose-json-editor-action) .code-block-flair { font-family: var(--font-interface); font-size: var(--font-smallest); line-height: 1.2; padding: 2px 8px; height: 24px; min-height: 24px; border: 1px solid transparent; border-radius: var(--radius-s); background: var(--background-secondary); box-sizing: border-box; }
 .is-mobile .loose-json-format-button, .is-mobile .cm-line:has(.loose-json-editor-action) .code-block-flair { min-height: 36px; }
-.markdown-rendered pre.loose-json-code-block { position: relative; }
-.loose-json-reading-action { position: absolute; top: 8px; right: 48px; z-index: 1; }
+.markdown-rendered pre.loose-json-code-block,
+.markdown-source-view pre.loose-json-code-block { position: relative; }
+/* 原生代码块按钮规则会单独设置底角；在阅读和实时预览中明确覆盖四角。 */
+.markdown-rendered pre.loose-json-code-block > .loose-json-reading-action,
+.markdown-source-view pre.loose-json-code-block > .loose-json-reading-action {
+  position: absolute;
+  top: 8px;
+  right: 44px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  min-height: 26px;
+  padding: 0 10px;
+  margin: 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  box-shadow: none;
+}
+/* 仅调整带插件操作的代码块复制按钮，使两项操作同高并保留宿主交互。 */
+.markdown-rendered pre.loose-json-code-block > .copy-code-button,
+.markdown-source-view pre.loose-json-code-block > .copy-code-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  width: 28px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  box-shadow: none;
+}
+.markdown-rendered pre.loose-json-code-block > .loose-json-reading-action:hover,
+.markdown-source-view pre.loose-json-code-block > .loose-json-reading-action:hover,
+.markdown-rendered pre.loose-json-code-block > .copy-code-button:hover,
+.markdown-source-view pre.loose-json-code-block > .copy-code-button:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+/* 触屏维持可点击面积，工具栏间距仍为八像素。 */
+.is-mobile pre.loose-json-code-block > .loose-json-reading-action { right: 52px; min-height: 36px; }
+.is-mobile pre.loose-json-code-block > .copy-code-button { width: 36px; min-height: 36px; }
 .loose-json-modal { width: min(960px, 92vw); }
 .loose-json-modal pre { white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; max-height: 300px; overflow: auto; background: var(--background-secondary); padding: 12px; font-family: var(--font-monospace); }
 .loose-json-change { border: 1px solid var(--background-modifier-border); padding: 12px; border-radius: 8px; margin-block: 12px; }
