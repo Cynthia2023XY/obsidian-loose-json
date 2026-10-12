@@ -38,4 +38,10 @@
 
 为保留验收者系统剪贴板，本次不覆盖真实剪贴板；JS 输出预览已验证。自动测试不包含系统复制权限证明。
 
-0.2.0 本地构建已准备，未创建正式 GitHub Release，未提交官方 Community directory。
+## GitHub 与目录发布
+
+2026-10-12：GitHub Release `0.2.0` 已公开发布，标签没有 `v` 前缀。Release 的 `main.js`、`manifest.json`、`styles.css` 已重新下载，SHA-256 与本地构建一致。产品及 JSON5 完整许可嵌入主包；README 已披露隐私和兼容性边界。发布提交的 GitHub CI 通过。
+
+Release：https://github.com/Cynthia2023XY/obsidian-loose-json/releases/tag/0.2.0
+
+Community Directory 已注册并识别 `0.2.0`，已排队自动审查。“No release matches your manifest version” 已解决。记录此状态时，公开页面安装按钮仍禁用，不能视为已经可从市场安装。
