@@ -58,7 +58,7 @@ const savedSettings = state('app.plugins.plugins["loose-json"].settings');
 try {
 evaluate('Object.assign(app.plugins.plugins["loose-json"].settings,{language:"zh",previewDocument:true,previewDecode:true,previewJs:true,buttons:true}); app.plugins.plugins["loose-json"].saveSettings();"defaults"');
 assert.equal(state('app.vault.getName()'), vault);
-assert.equal(state('app.plugins.plugins["loose-json"].manifest.version'), '0.2.0');
+assert.equal(state('app.plugins.plugins["loose-json"].manifest.version'), '0.2.1');
 evaluate(`(async()=>{ /* 本次新建的独立样例 */ const file=await app.vault.create(${JSON.stringify(path)},${JSON.stringify(source)}); await app.workspace.getLeaf(false).openFile(file,{state:{mode:"source"}});})()`);
 await until('app.workspace.getActiveFile()?.path', value => value === path);
 await until('document.querySelectorAll(".loose-json-editor-action").length', value => value === 2);
@@ -201,7 +201,7 @@ if (state('document.visibilityState') === 'visible') {
 }
 
 /** 将验收证据保存到忽略目录，避免把宿主状态推送到公开仓库 */
-const report = {date: new Intl.DateTimeFormat('sv-SE', {timeZone: 'Asia/Shanghai'}).format(new Date()), version: '0.2.0', vault, note: path, complete: skipped.length === 0, checks, skipped};
+const report = {date: new Intl.DateTimeFormat('sv-SE', {timeZone: 'Asia/Shanghai'}).format(new Date()), version: '0.2.1', vault, note: path, complete: skipped.length === 0, checks, skipped};
 await mkdir('.runtime-test', {recursive: true});
 await writeFile('.runtime-test/runtime.json', JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report, null, 2));

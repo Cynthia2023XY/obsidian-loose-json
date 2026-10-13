@@ -1,10 +1,10 @@
-# Loose JSON 0.2.0 验证记录
+# Loose JSON 0.2.1 验证记录
 
-日期：2026-10-12。
+日期：2026-10-13（CBC 兼容修复）。
 
 ## 自动验证
 
-`npm ci`、`npm run lint`（0 错误、0 警告）、`npm run test:coverage`、`npm run package` 均通过。61 项回归测试覆盖真实 CodeMirror 生命周期、JSON/JSON5、属性和对象项片段、多候选日志、null 出参、截断 token 保持、日志日期恢复、有界修复、大整数、重复字段、十六进制精确转换、i18n，以及引用/列表/CRLF/长围栏生成。干净安装审计未发现已报告漏洞。
+`npm ci`、`npm run lint`（0 错误、0 警告）、`npm run test:coverage`、`npm run package` 均通过。65 项回归测试覆盖真实 CodeMirror 生命周期、JSON/JSON5、属性和对象项片段、多候选日志、null 出参、截断 token 保持、日志日期恢复、有界修复、大整数、重复字段、十六进制精确转换、i18n，以及引用/列表/CRLF/长围栏生成。干净安装审计未发现已报告漏洞。
 
 核心覆盖率：语句 95.54%、分支 90.22%、函数 96.61%、行 99.27%。这是核心模块覆盖率，不代表整个 Obsidian UI。
 
@@ -32,6 +32,16 @@
 
 修复、拆块和 JS 预览的候选每批显示 50 项。无可修改片段时诊断窗口不提供空的确认应用按钮。复制生成结果和应用前均核验来源快照。
 
+## Codeblock Customizer 兼容修复
+
+2026-10-13：仅在 `新功能测试仓库` 安装 Codeblock Customizer 1.4.7，使用与问题库相同的初始配置验证；自动化行为验收未修改雅思库笔记。随后按用户明确授权将修复版安装到雅思库，保留设置和笔记；用户确认显示正常。兼容层独立创建按钮，不移动 CodeMirror widget，不改变 JSON 引擎、CBC 的复制和折叠处理。
+
+`scripts/verify-codeblock-customizer.mjs` 已验证：普通块/标题块的格式化与复制入口间距至少 8px；按钮中心的 `elementFromPoint` 命中自身；各块格式化后可单次撤销，大整数保持；编辑导致源位置移动后正确重绑；隐藏围栏、源码模式、阅读模式、按钮开关、折叠标题，以及两种插件启用顺序。禁用 CBC 恢复原生入口；卸载 Loose JSON 清理兼容按钮与隐藏标记。该脚本在 finally 中恢复两个插件设置，运行收据位于 `.runtime-test/codeblock-customizer-verification.json`。
+
+另通过官方 CLI/CDP 在 600px 桌面视口、侧栏收起的条件下验证了两个入口的点击命中，随后恢复视口和侧栏状态。这不是移动真机验收。完整原生 `scripts/verify-obsidian.mjs` 回归的 13 项行为通过，无跳过。
+
+新增测试覆盖工具栏晚挂载、清空与重建、动态绑定、设置与卸载清理、折叠后原始入口缺席，以及真实 CodeMirror 对独立标题/共享分组标题的源位置映射。共享分组标题不猜测当前标签所属源块，保留独立入口或命令兜底；未声明完整的分组工具栏集成支持。
+
 ## 实际验证边界
 
 尚未验证原生移动设备、最低版本 1.8.7、所有主题及其他代码块插件组合。桌面验收不能代表移动真机或最低版本兼容性。日志识别及修复是有界规则，不恢复缺失业务数据。
@@ -40,7 +50,7 @@
 
 ## GitHub 与目录发布
 
-2026-10-12：GitHub Release `0.2.0` 已公开发布，标签没有 `v` 前缀。Release 的 `main.js`、`manifest.json`、`styles.css` 已重新下载，SHA-256 与本地构建一致。产品及 JSON5 完整许可嵌入主包；README 已披露隐私和兼容性边界。发布提交的 GitHub CI 通过。
+2026-10-12：GitHub Release `0.2.0` 已公开发布，标签没有 `v` 前缀。Release 的 `main.js`、`manifest.json`、`styles.css` 已重新下载，SHA-256 与当时的 0.2.0 构建一致。产品及 JSON5 完整许可嵌入主包；README 已披露隐私和兼容性边界。发布提交的 GitHub CI 通过。
 
 Release：https://github.com/Cynthia2023XY/obsidian-loose-json/releases/tag/0.2.0
 

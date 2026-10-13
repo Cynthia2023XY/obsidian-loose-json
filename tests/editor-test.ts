@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import {afterEach, describe, expect, it} from 'vitest';
 import {Compartment, EditorState} from '@codemirror/state';
-import {EditorView} from '@codemirror/view';
+import {Decoration, EditorView, WidgetType} from '@codemirror/view';
 import {buttonsEnabled, editorButtons} from '../src/editor-buttons';
 
 /** 测试结束销毁真实 CodeMirror 实例，验证生命周期释放 */
@@ -38,5 +38,44 @@ describe('编辑器按钮实际行为', () => {
     expect(document.querySelectorAll('.loose-json-format-button')).toHaveLength(1);
     view.destroy();
     expect(lifecycle).toEqual([true, false]);
+  });
+});
+
+/** 模拟 CBC 的独立标题及共享分组标题，使用真实 CodeMirror 位置映射 */
+class CbcHeaderWidget extends WidgetType {
+  /** 区分独立源块标题和无法唯一绑定的分组标题 */
+  constructor(private grouped: boolean) {super();}
+  /** 由宿主编辑器创建自己的标题，不由 Loose JSON 搬动 */
+  toDOM(view: EditorView): HTMLElement {
+    // 标题包含 CBC 自己的工具栏及可选共享标签页。
+    const header = view.dom.ownerDocument.createElement('div');
+    header.className = 'codeblock-customizer-header-container-specific';
+    header.innerHTML = (this.grouped ? '<div class="codeblock-customizer-header-group-tabs"></div>' : '') + '<div class="codeblock-customizer-header-button-container"><span>JSON</span></div>';
+    return header;
+  }
+}
+
+describe('CBC 源块匹配边界', () => {
+  it('独立标题绑定真实源位置，共享分组标题不推断当前标签所属块', async () => {
+    // 记录点击入口绑定的源块位置。
+    const clicked: number[] = [];
+    // 两个不同代码块中的标题位置。
+    const source = '```json\n{"a":1}\n```\n\n```json\n{"b":2}\n```';
+    // 第二块的源位置用于确认不会接管共享标题。
+    const second = source.indexOf('```json', 1);
+    // 模拟 CBC 的真实 widget 装饰，posAtDOM 由 CodeMirror 计算。
+    const headers = EditorView.decorations.of(Decoration.set([
+      Decoration.widget({widget: new CbcHeaderWidget(false), side: -1}).range(0),
+      Decoration.widget({widget: new CbcHeaderWidget(true), side: -1}).range(second)
+    ]));
+    // 同一个编辑器同时加载两方扩展。
+    const view = new EditorView({parent: document.body, state: EditorState.create({doc: source, extensions: [headers, editorButtons((_, from) => clicked.push(from))]})});
+    views.push(view);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(document.querySelectorAll('.loose-json-toolbar-action')).toHaveLength(1);
+    document.querySelector<HTMLButtonElement>('.loose-json-toolbar-action')?.click();
+    expect(clicked).toEqual([0]);
+    expect(document.querySelectorAll('.loose-json-editor-action:not(.loose-json-cbc-adapted)')).toHaveLength(1);
+    expect(document.querySelector('.codeblock-customizer-header-group-tabs + div .loose-json-toolbar-action')).toBeNull();
   });
 });

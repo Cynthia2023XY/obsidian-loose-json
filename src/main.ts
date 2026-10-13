@@ -6,6 +6,7 @@ import {getLanguage, Editor, MarkdownRenderChild, MarkdownView, Modal, Notice, P
 import {applyChanges, DEFAULT_OPTIONS, type Change, type Options, type Plan} from './core/engine';
 import {blockBody, codeBlocks, generatedBlocks, type CodeBlock} from './core/markdown';
 import {buttonsEnabled, buttonLabels, editorButtons} from './editor-buttons';
+import {CBC_SHARED_HEADERS, CBC_TOOLBARS, CodeblockToolbar} from './codeblock-toolbar';
 import {startJob, type Operation} from './jobs';
 import {ChangesModal, ConversionModal, DiagnosticModal, ProgressModal} from './modals';
 
@@ -28,6 +29,8 @@ export default class LooseJsonPlugin extends Plugin {
   private editorViews = new Set<EditorView>();
   /** 所有阅读窗口的按钮，设置变更与卸载时统一释放 */
   private readingActions = new Set<HTMLElement>();
+  /** 阅读视图工具栏适配器，设置刷新与卸载时同步释放 */
+  private readingToolbars = new Set<CodeblockToolbar>();
   /** 卸载插件时终止未完成工作 */
   private cancellations = new Set<() => void>();
   /** 插件卸载时关闭预览，避免旧操作继续修改笔记 */
@@ -68,6 +71,7 @@ export default class LooseJsonPlugin extends Plugin {
   onunload(): void {
     this.modals.forEach(modal => modal.close()); this.modals.clear();
     this.cancellations.forEach(cancel => cancel()); this.cancellations.clear(); this.editorViews.clear();
+    this.readingToolbars.forEach(toolbar => toolbar.destroy()); this.readingToolbars.clear();
     this.readingActions.forEach(button => {button.parentElement?.removeClass('loose-json-code-block'); button.remove();});
     this.readingActions.clear();
   }
@@ -95,6 +99,7 @@ export default class LooseJsonPlugin extends Plugin {
       if (!view.dom.isConnected) {this.editorViews.delete(view); return;}
       view.dispatch({effects: this.buttonCompartment.reconfigure([buttonsEnabled.of(this.settings.buttons), buttonLabels.of([this.t('button.format'), this.t('button.title')])])});
     });
+    this.readingToolbars.forEach(toolbar => toolbar.schedule());
     this.readingActions.forEach(button => {button.hidden = !this.settings.buttons; button.setText(this.t('button.format')); button.setAttribute('aria-label', this.t('button.title'));});
   }
 
@@ -262,7 +267,12 @@ export default class LooseJsonPlugin extends Plugin {
       this.readingActions.add(button);
       // 随渲染区生命周期销毁按钮，插件卸载时不留下可点击旧操作。
       const child = new MarkdownRenderChild(pre);
-      child.register(() => {button.remove(); pre.removeClass('loose-json-code-block'); this.readingActions.delete(button);});
+      // 适配器只创建额外工具栏入口，仍委托原按钮按源范围执行操作。
+      const toolbar = new CodeblockToolbar(pre, () => [{anchor: button,
+        targets: this.settings.buttons && !pre.classList.contains('displayedInGroup') ? Array.from(pre.querySelectorAll<HTMLElement>(CBC_TOOLBARS)).filter(target => !target.closest(CBC_SHARED_HEADERS)) : [],
+        label: this.t('button.format'), title: this.t('button.title'), run: () => button.click()}]);
+      this.readingToolbars.add(toolbar);
+      child.register(() => {toolbar.destroy(); this.readingToolbars.delete(toolbar); button.remove(); pre.removeClass('loose-json-code-block'); this.readingActions.delete(button);});
       context.addChild(child);
       button.hidden = !this.settings.buttons;
       // 宿主提供的代码块所属源章节范围。

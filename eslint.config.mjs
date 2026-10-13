@@ -7,5 +7,5 @@ export default [
     'obsidianmd/ui/sentence-case': ['warn', {acronyms: ['JS', 'TS', 'JSON', 'JSON5'], brands: ['Loose JSON', 'MiB']}]
   }},
   // 编辑器组件使用所属 ownerDocument 创建节点，可独立测试且支持弹出窗口。
-  {files: ['src/editor-buttons.ts'], rules: {'obsidianmd/prefer-create-el': 'off'}}
+  {files: ['src/editor-buttons.ts', 'src/codeblock-toolbar.ts'], rules: {'obsidianmd/prefer-create-el': 'off'}}
 ];

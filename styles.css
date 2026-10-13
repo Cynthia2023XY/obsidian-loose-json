@@ -1,5 +1,5 @@
 /* 仅在本插件提供操作的围栏行，让原生标注参与排布，按钮紧邻其左侧。 */
-.markdown-source-view .cm-line:has(.loose-json-editor-action) .code-block-flair {
+.markdown-source-view .cm-line:has(.loose-json-editor-action:not(.loose-json-cbc-adapted)) .code-block-flair {
   position: static;
   float: right;
   margin-inline-start: 8px;
@@ -9,7 +9,7 @@
 .loose-json-format-button:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
 .loose-json-format-button:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 2px; }
 /* 浮动按钮比原围栏行更高，为整颗按钮留出空间，防止下一行背景覆盖底角。 */
-.markdown-source-view .cm-line:has(.loose-json-editor-action) { min-height: 28px; }
+.markdown-source-view .cm-line:has(.loose-json-editor-action:not(.loose-json-cbc-adapted)) { min-height: 28px; }
 .markdown-source-view .cm-line .loose-json-editor-action {
   position: relative;
   z-index: 1;
@@ -23,17 +23,17 @@
   margin: 0;
 }
 
-.markdown-source-view .cm-line:has(.loose-json-editor-action) .code-block-flair { font-family: var(--font-interface); font-size: var(--font-smallest); line-height: 1.2; padding: 2px 8px; height: 24px; min-height: 24px; border: 1px solid transparent; border-radius: var(--radius-s); background: var(--background-secondary); box-sizing: border-box; }
+.markdown-source-view .cm-line:has(.loose-json-editor-action:not(.loose-json-cbc-adapted)) .code-block-flair { font-family: var(--font-interface); font-size: var(--font-smallest); line-height: 1.2; padding: 2px 8px; height: 24px; min-height: 24px; border: 1px solid transparent; border-radius: var(--radius-s); background: var(--background-secondary); box-sizing: border-box; }
 /* 标注采用与按钮相同的居中排布，统一文字基线并保留底部圆角。 */
-.markdown-source-view .cm-line:has(.loose-json-editor-action) .code-block-flair {
+.markdown-source-view .cm-line:has(.loose-json-editor-action:not(.loose-json-cbc-adapted)) .code-block-flair {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin-block: 2px;
   border-radius: 8px;
 }
-.is-mobile .loose-json-format-button, .is-mobile .cm-line:has(.loose-json-editor-action) .code-block-flair { min-height: 36px; }
-.is-mobile .cm-line:has(.loose-json-editor-action) { min-height: 40px; }
+.is-mobile .loose-json-format-button, .is-mobile .cm-line:has(.loose-json-editor-action:not(.loose-json-cbc-adapted)) .code-block-flair { min-height: 36px; }
+.is-mobile .cm-line:has(.loose-json-editor-action:not(.loose-json-cbc-adapted)) { min-height: 40px; }
 .markdown-rendered pre.loose-json-code-block,
 .markdown-source-view pre.loose-json-code-block { position: relative; }
 /* 原生代码块按钮规则会单独设置底角；在阅读和实时预览中明确覆盖四角。 */
@@ -95,6 +95,40 @@
   .loose-json-comparison { grid-template-columns: 1fr; }
   .loose-json-format-button { min-height: 36px; }
   /* 窄窗口按钮增高时，操作行和语言标注同步增高，保持底角可见。 */
-  .markdown-source-view .cm-line:has(.loose-json-editor-action) { min-height: 40px; }
-  .markdown-source-view .cm-line:has(.loose-json-editor-action) .code-block-flair { min-height: 36px; }
+  .markdown-source-view .cm-line:has(.loose-json-editor-action:not(.loose-json-cbc-adapted)) { min-height: 40px; }
+  .markdown-source-view .cm-line:has(.loose-json-editor-action:not(.loose-json-cbc-adapted)) .code-block-flair { min-height: 36px; }
 }
+
+/* CBC 工具栏共享自然布局，不再用固定右侧偏移与复制按钮抢占位置。 */
+.loose-json-cbc-toolbar { gap: 8px; align-items: center; }
+.loose-json-cbc-toolbar > .loose-json-toolbar-action {
+  position: static;
+  flex: 0 0 auto;
+  margin: 0;
+  border-radius: 8px;
+}
+/* 仅隐藏已成功创建兼容入口的原生按钮；卸载 CBC 后自动恢复。 */
+.markdown-source-view .cm-line .loose-json-editor-action.loose-json-cbc-adapted,
+pre.loose-json-code-block > .loose-json-reading-action.loose-json-cbc-adapted { display: none; }
+/* 未匹配到可靠工具栏时，独立操作行避开 CBC 右上角的绝对定位控件。 */
+.markdown-source-view .cm-line.codeblock-customizer-line:has(.loose-json-editor-action:not(.loose-json-cbc-adapted)) {
+  height: auto;
+}
+.markdown-source-view .cm-line.codeblock-customizer-line > .loose-json-editor-action:not(.loose-json-cbc-adapted) {
+  float: none;
+  display: flex;
+  justify-content: flex-end;
+  padding-top: calc(var(--language-icon-size, 32px) + 8px);
+}
+/* 共享分组工具栏无法唯一绑定源块时，在代码正文前保留独立阅读操作行。 */
+.markdown-rendered pre.loose-json-code-block.codeblock-customizer-pre > .loose-json-reading-action:not(.loose-json-cbc-adapted),
+.markdown-source-view pre.loose-json-code-block.codeblock-customizer-pre > .loose-json-reading-action:not(.loose-json-cbc-adapted) {
+  position: relative;
+  top: auto;
+  right: auto;
+  display: block;
+  margin: 8px;
+}
+
+/* 设置关闭时保持原生入口隐藏，独立操作行样式不能覆盖 hidden 语义。 */
+.loose-json-reading-action[hidden] { display: none !important; }

@@ -81,6 +81,8 @@ All formatting and conversion run locally on your device. No network requests, a
 
 The declared API minimum is Obsidian 1.8.7, the version that introduced `getLanguage`. Desktop behavior has been verified on Obsidian 1.14.4. The runtime uses Web APIs and does not require Node.js or Electron APIs. Native mobile devices and the minimum app version have not yet been tested; see the validation notes for the exact test coverage.
 
+Codeblock Customizer 1.4.7 is supported in Live Preview, source mode (when enabled in CBC), and reading mode. Loose JSON adds a separate button to each reliably matched CBC toolbar without moving CodeMirror widgets or replacing CBC copy/fold controls. Excluded blocks keep the native layout. Unmatched toolbars use a separate action row; shared grouped headers are not used to infer a source block. Settings changes, toolbar rebuilds, and plugin unloading clean up the added controls. Native mobile behavior remains unverified.
+
 ## Development
 
 Node.js 22 or later:
@@ -93,7 +95,9 @@ npm run package
 
 Runtime verification in the isolated Chinese test vault is available via `node scripts/verify-obsidian.mjs`; it creates a uniquely named synthetic note. Keep that vault window visible for reading-mode checks. Hidden-window skips are reported explicitly. See [validation notes](docs/validation.md) for tested behavior and remaining release checks.
 
-Copy the files in `dist/loose-json-0.2.0/` into a test vault. `npm run dev` rebuilds on source changes; it does not start an HTTP server. Reload the plugin after rebuilding.
+CBC runtime verification is available via `node scripts/verify-codeblock-customizer.mjs` with both plugins enabled in the visible isolated test vault. It restores plugin settings after verification and writes a local receipt under `.runtime-test/`.
+
+Copy the files in `dist/loose-json-0.2.1/` into a test vault. `npm run dev` rebuilds on source changes; it does not start an HTTP server. Reload the plugin after rebuilding.
 
 The core tokenizer, range scanner, parser, and formatter were written independently. Formatting changes whitespace between tokens rather than parsing and reserializing numeric values. Obsidian and CodeMirror are external host dependencies; JSON5 is bundled solely for string/key decoding.
 
