@@ -4,16 +4,17 @@ import {Compartment} from '@codemirror/state';
 import type {EditorView} from '@codemirror/view';
 import {getLanguage, Editor, MarkdownRenderChild, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, type MarkdownPostProcessorContext} from 'obsidian';
 import {applyChanges, DEFAULT_OPTIONS, type Change, type Options, type Plan} from './core/engine';
-import {blockBody, codeBlocks, generatedBlocks, type CodeBlock} from './core/markdown';
+import {blockBody, codeBlocks, fencedLog, generatedBlocks, type CodeBlock} from './core/markdown';
 import {buttonsEnabled, buttonLabels, editorButtons} from './editor-buttons';
 import {CBC_SHARED_HEADERS, CBC_TOOLBARS, CodeblockToolbar} from './codeblock-toolbar';
 import {startJob, type Operation} from './jobs';
 import {ChangesModal, ConversionModal, DiagnosticModal, ProgressModal} from './modals';
+import {createSampleNote} from './sample-note';
 
-/** 持久化设置，只影响用户显式操作 */
-interface Settings {indent: '2' | '4' | 'tab'; buttons: boolean; compactArrays: boolean; allowInnerJson5: boolean; maxMiB: number; language: Language; previewDocument: boolean; previewDecode: boolean; previewJs: boolean}
+/** 持久化用户设置及首次示例创建状态 */
+interface Settings {indent: '2' | '4' | 'tab'; buttons: boolean; compactArrays: boolean; allowInnerJson5: boolean; maxMiB: number; language: Language; previewDocument: boolean; previewDecode: boolean; previewJs: boolean; sampleNoteCreated: boolean}
 /** 插件初始设置 */
-const DEFAULT_SETTINGS: Settings = {indent: '2', buttons: true, compactArrays: false, allowInnerJson5: false, maxMiB: 1, language: 'system', previewDocument: true, previewDecode: true, previewJs: true};
+const DEFAULT_SETTINGS: Settings = {indent: '2', buttons: true, compactArrays: false, allowInnerJson5: false, maxMiB: 1, language: 'system', previewDocument: true, previewDecode: true, previewJs: true, sampleNoteCreated: false};
 /** 命令定位结果，保留完整快照以防预览后内容变更 */
 interface Target {snapshot: string; from: number; to: number; content: string; block?: CodeBlock; parentBlock?: CodeBlock}
 /** 可复用于旧版设置页与新版设置搜索的声明式展示定义 */
@@ -38,6 +39,8 @@ export default class LooseJsonPlugin extends Plugin {
 
   /** 最近处理的本地诊断，不写入配置文件 */
   private lastDetails = '';
+  /** 防止布局就绪回调在插件卸载后创建笔记 */
+  private unloaded = false;
   /** 当前宿主与用户设置共同决定的界面语言 */
   t: Translator = translator('zh');
 
@@ -51,6 +54,7 @@ export default class LooseJsonPlugin extends Plugin {
       this.settings.maxMiB = Math.max(0.1, Math.min(10, Number(this.settings.maxMiB) || 1));
     }
     if (!['system', 'zh', 'en'].includes(this.settings.language)) this.settings.language = 'system';
+    this.settings.sampleNoteCreated = stored?.sampleNoteCreated === true;
     this.t = translator(resolveLocale(this.settings.language, getLanguage()));
     this.addSettingTab(new LooseJsonSettings(this));
     this.registerEditorExtension([
@@ -65,10 +69,30 @@ export default class LooseJsonPlugin extends Plugin {
     this.addCommand({id: 'extract-json', name: this.t('commands.extract'), editorCallback: editor => {void this.runEditor(editor, 'extract');}});
     this.addCommand({id: 'view-diagnostics', name: this.t('commands.details'), callback: () => this.openModal(new DiagnosticModal(this.app, this.lastDetails || this.t('none'), this.t))});
     this.addCommand({id: 'decode-fields', name: this.t('commands.decode'), editorCallback: editor => {void this.runEditor(editor, 'decode');}});
+    this.addCommand({id: 'create-sample-note', name: this.t('commands.sample'), callback: () => {void this.generateSample(true);}});
+    this.app.workspace.onLayoutReady(() => {if (!this.unloaded && !this.settings.sampleNoteCreated) void this.generateSample(false);});
+  }
+
+  /** 首次启用自动创建入门笔记，手动命令另建副本并打开 */
+  private async generateSample(open: boolean): Promise<void> {
+    try {
+      // 使用实际界面语言生成演示，所有副本均避免覆盖已有文件。
+      const path = await createSampleNote(this.app.vault, resolveLocale(this.settings.language, getLanguage()));
+      this.settings.sampleNoteCreated = true;
+      await this.saveData(this.settings);
+      if (this.unloaded) return;
+      new Notice(this.t('sample.created', {path}));
+      // 自动生成只通知位置，不打断用户当前阅读。
+      const file = this.app.vault.getAbstractFileByPath(path);
+      if (open && file instanceof TFile) await this.app.workspace.getLeaf(false).openFile(file);
+    } catch {
+      if (!this.unloaded) new Notice(this.t('sample.failed'));
+    }
   }
 
   /** 停止后台处理，释放编辑器引用 */
   onunload(): void {
+    this.unloaded = true;
     this.modals.forEach(modal => modal.close()); this.modals.clear();
     this.cancellations.forEach(cancel => cancel()); this.cancellations.clear(); this.editorViews.clear();
     this.readingToolbars.forEach(toolbar => toolbar.destroy()); this.readingToolbars.clear();
@@ -189,7 +213,7 @@ export default class LooseJsonPlugin extends Plugin {
     } catch (error) {new Notice(describe(errorDiagnostic(error), this.t));}
   }
 
-  /** 生成结果默认插入原代码块之后，替换需在独立预览内明确选择 */
+  /** 日志提取在原位置包围数据，其他转换按用户选择插入副本或替换目标 */
   private writeGenerated(editor: Editor, target: Target, items: Output[], replace: boolean, extract: boolean): void {
     // 容器和换行风格沿用来源。
     const parent = target.block ?? target.parentBlock;
@@ -197,6 +221,22 @@ export default class LooseJsonPlugin extends Plugin {
     const eol = parent?.eol ?? (target.snapshot.includes('\r\n') ? '\r\n' : '\n');
     // 来源代码块的引用或列表缩进。
     const prefix = parent?.prefix ?? '';
+    if (extract) {
+      // 选区在外层围栏内部时不能只替换局部而生成嵌套围栏。
+      if (target.parentBlock && target.parentBlock.prefix) throw new DataError('error.extractContainer');
+      // 选中普通围栏中的部分日志时，保留未选中的正文并拆开外层围栏。
+      const selected = target.parentBlock ? items.map(item => ({...item, from: item.from + target.from - target.parentBlock!.bodyFrom, to: item.to + target.from - target.parentBlock!.bodyFrom})) : items;
+      // 在候选原位置加入围栏，不额外生成入参标题或删除日志前后缀。
+      const wrapped = fencedLog(parent?.content ?? target.content, selected, eol, parent ? {} : {before: target.snapshot.slice(Math.max(0, target.from - 1), target.from), after: target.snapshot.slice(target.to, target.to + 1)});
+      // 整个日志代码块拆开时移除外层围栏，保留容器缩进及所有日志正文。
+      const after = parent ? wrapped.split(/\r?\n/).map(line => prefix + line).join(eol) + eol : wrapped;
+      // 当前目标只做一次替换，以便一次撤销恢复原日志。
+      const from = parent?.from ?? target.from;
+      // 替换范围包含原有外层围栏，避免代码块内部嵌套无效围栏。
+      const to = parent?.to ?? target.to;
+      this.applyEditor(editor, target.snapshot, [{from, to, before: target.snapshot.slice(from, to), after, label: ''}]);
+      return;
+    }
     // 放到原围栏之外的独立结果块。
     const fences = generatedBlocks(items.map((item, index) => ({text: item.text, label: item.role ? this.t(item.role) + ' · ' + item.label : item.label || this.t('fragment', {index: index + 1})})), prefix, eol);
     // 单个修复结果允许替换代码块内容；拆块替换必须包含外层围栏。

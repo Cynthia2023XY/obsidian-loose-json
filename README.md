@@ -1,54 +1,322 @@
 # Loose JSON
 
-An offline JSON tool for Obsidian developers reading API payloads and logs. Format JSON and JSON-like snippets, preserve surrounding log text, copy JavaScript object literals, and convert stringified JSON fields into objects or arrays.
+[English](README-EN.md)
 
-## Features
+为在 Obsidian 中阅读接口数据和日志的开发者提供的离线**宽松 JSON 格式化工具，适用于非标准 JSON**。可以格式化 JSON 和类 JSON 片段、保留外围日志、复制 JavaScript 对象字面量，以及把字符串化 JSON 字段转为对象或数组。
 
-- Format the selected text or the current `json` / unlabelled fenced code block.
-- Format buttons in editing and reading views. Reading-view formatting opens the verified source block in editing mode so the change can be undone.
-- Preview document-wide changes; timestamps, IP addresses, URLs, and other log text outside detected JSON remain unchanged.
-- Preview and copy JS literals with unquoted identifier keys and single-quoted strings.
-- Select stringified JSON fields by path and source position; decode up to three layers and apply only selected changes.
-- Preserve numeric spelling, large integer text, duplicate keys, comments, and property order during formatting.
-- Cancellable background processing. No network requests, telemetry, accounts, or clipboard reads.
+**不必先把内容整理成标准 JSON 再格式化。** 从日志、控制台或配置平台复制的内容，即使夹杂时间戳、入参标签和日志文字，或使用单引号、无引号键名、注释、尾逗号等常见非标准写法，也可以对可识别的数据片段进行排版。支持的输入与限制见下文。
 
-## Installation
+“宽松格式化”只调整排版，保留原有数据和语法，不会自动把非标准 JSON 改成严格 JSON，也不会补写缺失值。需要输出标准 JSON 时，请使用独立的“修复为严格 JSON”命令并检查预览。
 
-Install **Loose JSON** from Settings → Community plugins → Browse, or use the [Community Directory listing](https://community.obsidian.md/plugins/loose-json).
+## 功能
 
-Download `main.js`, `manifest.json`, and `styles.css` from a release, place them in `<vault>/.obsidian/plugins/loose-json/`, then enable **Loose JSON** in Settings → Community plugins. Keep the included license notices alongside distributed copies. For BRAT, add `Cynthia2023XY/obsidian-loose-json`.
+- 宽松格式化选中的文本，或当前 `json` / 未注明语言的围栏代码块；支持标准 JSON、常见非标准 JSON 写法和日志中的 JSON 片段。
+- 在编辑和阅读视图中提供格式化按钮。阅读视图会先核对来源，再打开源代码块的编辑模式，修改可撤销。
+- 预览全文修改；检测到的 JSON 之外的时间、IP 地址、URL 和其他日志文字保持原样。
+- 预览并复制 JavaScript 对象字面量，合法标识符键名不加引号，字符串使用单引号。
+- 按字段路径和源位置选择字符串化 JSON 字段，最多解码三层转义，只应用选中的修改。
+- 格式化时保留数字原写法、大整数文本、重复键、注释和属性顺序。
+- 后台处理可以取消。不发送网络请求，不收集遥测，不需要账号，也不读取剪贴板。
 
-## Commands
+## 安装
 
-The interface supports Chinese and English, following Obsidian by default. Choose an explicit language in settings. Buttons and new dialogs update immediately; re-enable the plugin to update command names without changing IDs or hotkeys.
+在“设置 → 第三方插件 → 浏览”中安装 **Loose JSON**，也可以通过[官方插件目录](https://community.obsidian.md/plugins/loose-json)查找。
 
-| Command | Usage |
+手动安装时，从发布版本下载 `main.js`、`manifest.json` 和 `styles.css`，放入 `<笔记库>/.obsidian/plugins/loose-json/`，再到“设置 → 第三方插件”启用 **Loose JSON**。分发副本时请保留随附的许可声明。使用 BRAT 时，添加 `Cynthia2023XY/obsidian-loose-json`。
+
+### 首次启用即可测试
+
+首次启用插件后，会在笔记库根目录自动生成 `Loose JSON 功能测试.md`，包含模拟数据、操作步骤和预期结果，帮助你直接验证宽松格式化、选区格式化、全文格式化、JavaScript 复制、字符串字段展开、日志拆块及严格 JSON 修复。示例语言跟随插件界面设置，英文文件名为 `Loose JSON Sample.md`。
+
+已有同名文件或文件夹时会另用带编号的名称，不覆盖任何内容。创建成功后会记录状态，重新启用、升级或删除示例都不会自动重复生成；需要新副本时，运行“生成示例笔记”。自动创建只提示位置，不切换当前笔记；手动命令会打开新副本。旧版本用户首次升级到支持此功能的版本时，也会生成一次。
+
+## 命令
+
+界面支持中文和英文，默认跟随 Obsidian，也可以在设置中指定语言。修改语言后，按钮和新打开的弹窗会立即更新；重新启用插件可更新命令名称，命令标识和快捷键保持不变。
+
+| 命令 | 用法 |
 | --- | --- |
-| 格式化 JSON 代码块或选区 | Select text or place the cursor in a JSON/unlabelled block. Valid fragments are formatted in place. Incomplete JSON-like objects and arrays can be laid out without completing missing data; damaged content requires review. |
-| 格式化当前文档中的 JSON | Review detected JSON fragments and choose changes to apply. YAML frontmatter, inline code, Markdown links and other code-block languages are protected. |
-| 复制为 JavaScript | Complete values, property fragments and log-wrapped data are supported. Choose a candidate and automatic/object/property output; the original note is unchanged. |
-| 将字符串化 JSON 字段转为对象 | Review fields whose string values contain JSON objects/arrays, then apply selected changes. This changes their data types. |
-| 修复为严格 JSON | Review safe JSON5 normalization and structural closure. Copy or insert a separate result by default; replacing the source is explicit. Missing strings or field values are never invented. |
-| 提取日志 JSON 为代码块 | Extract outer data values, including clearly labelled `null` responses, into separate blocks in source order. Insertion preserves original logs and stays outside the source fence. |
-| 查看上次处理诊断 | Inspect skipped fragments and conversion warnings locally. |
+| 格式化 JSON 代码块或选区 | 选中文本，或将光标放进 JSON / 未注明语言的代码块。可识别的片段会原地格式化；未完整的类 JSON 对象和数组可以调整排版，但不会补写缺失数据。损坏内容需要预览确认。 |
+| 格式化当前文档中的 JSON | 预览检测到的 JSON 片段，选择要应用的修改。保护 YAML 属性、行内代码、Markdown 链接和其他语言代码块。 |
+| 复制为 JavaScript | 支持完整值、属性片段和日志中的数据。选择候选以及自动、对象或属性输出形态；原笔记不变。 |
+| 将字符串化 JSON 字段转为对象 | 预览值中包含 JSON 对象或数组的字符串字段，再应用选中的修改。此操作会改变字段类型。 |
+| 修复为严格 JSON | 预览可安全规范的 JSON5 语法和结构闭合。默认复制或插入独立结果；替换原文需明确选择。不会猜测缺失字符串或字段值。 |
+| 提取日志 JSON 为代码块 | 将选中的外层数据值，包括明确标注的 `null` 返回值，在原位置包成代码块。保留外围日志和记录顺序；预览后一次应用，可撤销。 |
+| 生成示例笔记 | 在根目录创建并打开新的测试副本；已有笔记保持不变。 |
+| 查看上次处理诊断 | 在本地查看跳过的片段及转换提示。 |
 
-Document formatting, field decoding and JS copying have independent preview settings, enabled by default. Disabling document/decode previews applies valid changes directly; disabling JS preview copies only a unique result. Multiple JS candidates still require selection. Repair and extraction always require review. The document preview includes a direct link to preview settings.
+全文格式化、字段转换和 JavaScript 复制分别有独立的预览设置，默认开启。关闭全文或字段转换预览后，会直接应用有效修改；关闭 JavaScript 预览后，仅在结果唯一时直接复制，多候选仍需选择。修复和日志拆块始终需要预览。全文预览中也提供了预览设置的入口。
 
-Valid direct formatting can be undone once. Document and decode changes are also applied in one editor transaction. If a note changes while a preview is open, rerun the command; stale previews are never written.
+直接格式化、全文修改和字段转换都可以一次撤销。如果预览打开期间笔记发生变化，请重新运行命令；过期预览不会写入笔记。
 
-## Examples
+## 使用场景与可复制的测试示例
 
-Mixed log input:
+复制接口返回或业务日志到 Obsidian 后，可以按下面的场景选择命令。示例采用默认的两空格缩进，保留业务数据的典型结构；账号、令牌、内部地址及资源标识已替换为示例值，较长日志只保留与操作有关的字段。
 
-```text
-2026-10-08 15:59:55.931 | WARN | 11.247.172.117 | request={"id":9223372036854775807,"items":[1,2]}
+| 你现在想做什么 | 使用哪个入口 | 得到什么 |
+| --- | --- | --- |
+| 看清一个代码块中的 JSON 或日志入参 | 代码块的“格式化”按钮，或“格式化 JSON 代码块或选区”命令 | 原代码块内的 JSON 展开，外围日志保留 |
+| 只整理选中的一段数据 | “格式化 JSON 代码块或选区”命令 | 只修改选区 |
+| 批量整理当前笔记里的 JSON | “格式化当前文档中的 JSON”命令 | 预览后应用选中的修改 |
+| 把接口数据拿去写 JavaScript 入参 | “复制为 JavaScript”命令 | 复制对象字面量，原笔记不变 |
+| 看清 CMS 返回的转义 JSON 字符串 | “将字符串化 JSON 字段转为对象”命令 | 选中的字符串字段变成对象或数组 |
+| 拿到一大段日志，还不确定该看哪里 | “提取日志 JSON 为代码块”命令 | 每段选中的 JSON 在原位置成为独立代码块 |
+
+在编辑模式打开命令面板，搜索上述命令即可调用。选区优先；没有选区时，除全文命令外，把光标放进 `json` 或未注明语言的代码块。代码块上的按钮用于格式化，转换和日志拆块通过命令调用。
+
+### 1. 看清一个代码块中的日志入参
+
+适用于日志中夹着一大段压成一行的 JSON。点击代码块的“格式化”按钮，或者把光标放进代码块后运行“格式化 JSON 代码块或选区”。下面的日志放在 `json` 或未注明语言的代码块中都可以处理。
+
+修改前：
+
+```json
+26-10-10.17:16:05.109 [JSF-BZ-22010-322-T-20] INFO ExperienceFundRemoteInvoker - 发放基金体验金 GiveUserFundExpMoneyQuery={"activityName":"示例基金体验金","deviceInfo":{"appType":"0","sdkToken":"demo-token"},"fundCode":"000001","generalParameters":{"prizeName":"示例基金体验金","prizeId":"demo-prize","amount":"1000.00"},"orderAmount":1000.00,"jdPin":"demo-user"},FundExperienceResponse=null
 ```
 
-Formatted result:
+修改后，日志仍在同一个代码块中，只有 JSON 的排版变化：
+
+```json
+26-10-10.17:16:05.109 [JSF-BZ-22010-322-T-20] INFO ExperienceFundRemoteInvoker - 发放基金体验金 GiveUserFundExpMoneyQuery={
+  "activityName": "示例基金体验金",
+  "deviceInfo": {
+    "appType": "0",
+    "sdkToken": "demo-token"
+  },
+  "fundCode": "000001",
+  "generalParameters": {
+    "prizeName": "示例基金体验金",
+    "prizeId": "demo-prize",
+    "amount": "1000.00"
+  },
+  "orderAmount": 1000.00,
+  "jdPin": "demo-user"
+},FundExperienceResponse=null
+```
+
+时间、线程名、日志说明和尾部的 `FundExperienceResponse=null` 保留；数字 `1000.00` 也保留原写法。
+
+### 2. 只整理选中的 JSON
+
+适用于一个代码块很长，但当前只想看其中的入参、某个字段或一段数组。选中需要整理的文本，再运行“格式化 JSON 代码块或选区”。不需要选中整个代码块，也不要跨越代码块的开始或结束围栏。
+
+例如在上一条日志中只选中这段：
+
+```json
+{"prizeName":"示例基金体验金","prizeId":"demo-prize","amount":"1000.00"}
+```
+
+选区会变成下面的排版，日志中其余部分保持原样：
+
+```json
+{
+  "prizeName": "示例基金体验金",
+  "prizeId": "demo-prize",
+  "amount": "1000.00"
+}
+```
+
+### 3. 批量整理一整篇笔记
+
+适用于笔记已经积累了多个接口返回，需要统一整理。运行“格式化当前文档中的 JSON”，在预览中核对并勾选需要应用的修改。
+
+可以把下面两个代码块放到同一篇笔记中测试：
+
+```json
+{"code":"0000","data":{"total":1,"items":[1,2]}}
+```
+
+```
+INFO request={"fundCode":"000001","orderAmount":1000.00}, response=null
+```
+
+两个块中的 JSON 都会展开，代码块之间的正文保留。全文扫描会保护 YAML 属性、行内代码、Markdown 链接和其他语言的代码块；无法可靠识别的片段会跳过，可通过“查看上次处理诊断”了解原因。
+
+此命令会修改当前笔记中多个位置，复杂笔记建议保留默认预览。设置中的“全文格式化前预览”关闭后会直接应用可处理的修改。应用后可一次撤销。
+
+### 4. 把 JSON 复制成 JavaScript 入参
+
+适用于已经拿到接口数据，想直接粘贴到 JavaScript 中作为对象入参。选中 JSON，或把光标放进代码块，运行“复制为 JavaScript”，在预览中选择候选和输出形态后复制。
+
+原 JSON：
+
+```json
+{"items":[1,2],"id":9223372036854775807}
+```
+
+复制的对象字面量：
+
+```js
+{
+  items: [
+    1,
+    2
+  ],
+  id: 9223372036854775807
+}
+```
+
+合法的标识符键名会去掉引号，字符串使用单引号。例如：
+
+```js
+{
+  activityName: '示例基金体验金',
+  fundCode: '000001',
+  deviceInfo: {
+    appType: '0',
+    sdkToken: 'demo-token'
+  },
+  orderAmount: 1000.00
+}
+```
+
+复制不会改动原笔记。大整数的文本会完整保留，但 JavaScript 运行时将它作为 `Number` 求值仍可能丢失精度，实际使用时应按接口契约选择字符串或 BigInt。
+
+### 5. 展开 CMS 返回的字符串化 JSON 字段
+
+适用于接口返回里嵌套了大量 `\"`，例如 CMS 配置的 `resData` 是一整段 JSON 字符串，很难直接阅读。运行“将字符串化 JSON 字段转为对象”，核对字段路径并勾选要展开的字段。
+
+先用小样例测试：
+
+```json
+{
+  "data": "{\"total\":1}",
+  "path": "C:\\tmp"
+}
+```
+
+选择 `/data` 后：
+
+```json
+{
+  "data": {
+    "total": 1
+  },
+  "path": "C:\\tmp"
+}
+```
+
+再用 CMS 场景测试：
+
+```json
+{
+  "resultData": {
+    "datas": {
+      "templateType": 2,
+      "resData": "{\"qd_res\":{\"type\":\"01\",\"resid\":\"demo-resource\"},\"res_id\":{\"template\":\"2\",\"sysCode\":\"fund_channel\",\"skuCode\":\"000001\"}}"
+    },
+    "status": "SUCCESS"
+  },
+  "success": true
+}
+```
+
+选择 `/resultData/datas/resData` 后：
+
+```json
+{
+  "resultData": {
+    "datas": {
+      "templateType": 2,
+      "resData": {
+        "qd_res": {
+          "type": "01",
+          "resid": "demo-resource"
+        },
+        "res_id": {
+          "template": "2",
+          "sysCode": "fund_channel",
+          "skuCode": "000001"
+        }
+      }
+    },
+    "status": "SUCCESS"
+  },
+  "success": true
+}
+```
+
+这会把字段类型从字符串改为对象或数组。普通文字、路径、URL 和 `"123"` 这样的字符串保持原样。新展开的对象中如果还有字符串化 JSON，需要再次运行命令；不会一次递归转换所有层级。关闭字段转换预览后，会直接转换当前目标中全部可识别字段。
+
+### 6. 把日志里的多段 JSON 拆成独立代码块
+
+适用于复制了一大段日志，暂时还不确定应该看哪里，希望把入参、返回值和数组分别展开阅读。选中原始日志，或者把光标放进存放日志的代码块，运行“提取日志 JSON 为代码块”。在预览中选择候选，查看“完整日志结果（保留外围文本）”，再点击“应用选中修改”。
+
+测试日志：
 
 ```text
-2026-10-08 15:59:55.931 | WARN | 11.247.172.117 | request={
-  "id": 9223372036854775807,
+26-10-14.10:23:01.813 [T-1324] INFO QueryService - 使用RPC调用组件项目的验资接口返回{"code":"00000","data":[],"msg":"成功"}
+26-10-14.10:23:01.813 [T-1324] INFO ApiImpl - 返回值 CheckMissionWidgetResponse=[{"taskId":"37339","canPullModule":false}]
+26-10-14.10:23:01.813 [T-1324] INFO ProviderAspect - 入参:[{"pin":"demo-user","reqList":[{"compType":"TASK","taskId":37339}]}], 出参:{"code":"00000","data":[{"canPullModule":false,"taskId":"37339"}],"msg":"成功"}, 耗时3ms
+```
+
+应用后，下面每段 JSON 都是笔记中的独立代码块。时间、说明、分隔符、耗时和日志顺序保留；为让围栏独立成行，会在 JSON 前后增加必要换行：
+
+26-10-14.10:23:01.813 [T-1324] INFO QueryService - 使用RPC调用组件项目的验资接口返回
+```json
+{
+  "code": "00000",
+  "data": [],
+  "msg": "成功"
+}
+```
+
+26-10-14.10:23:01.813 [T-1324] INFO ApiImpl - 返回值 CheckMissionWidgetResponse=
+```json
+[
+  {
+    "taskId": "37339",
+    "canPullModule": false
+  }
+]
+```
+
+26-10-14.10:23:01.813 [T-1324] INFO ProviderAspect - 入参:
+```json
+[
+  {
+    "pin": "demo-user",
+    "reqList": [
+      {
+        "compType": "TASK",
+        "taskId": 37339
+      }
+    ]
+  }
+]
+```
+, 出参:
+```json
+{
+  "code": "00000",
+  "data": [
+    {
+      "canPullModule": false,
+      "taskId": "37339"
+    }
+  ],
+  "msg": "成功"
+}
+```
+, 耗时3ms
+
+同一行中的入参和出参可以分别拆块，未勾选的 JSON 保持原样。明确标注的空返回值（如 `response=null`）也可单独包围。不会额外添加“入参”或“片段”标题；应用后可一次撤销。
+
+普通格式化会在原代码块内部展开 JSON；这个命令会生成多个独立代码块。如果处理的是整个日志代码块，会移除原来的外层围栏，让新代码块正常显示。引用或列表里的日志请选择整个代码块，局部选区无法安全拆块时会提示。
+
+### 另外两个入口：修复与诊断
+
+从控制台复制的数据有时使用单引号、无引号键名或尾逗号，需要提交到严格 JSON 接口时，可以运行“修复为严格 JSON”。例如：
+
+```text
+{fundCode:'000001',items:[1,2,],}
+```
+
+预览结果：
+
+```json
+{
+  "fundCode": "000001",
   "items": [
     1,
     2
@@ -56,36 +324,36 @@ Formatted result:
 }
 ```
 
-Stringified field:
+普通格式化只调整排版；严格 JSON 修复可能去掉注释、规范语法或补齐可确认的结构括号，始终需要检查预览。建议先复制或插入结果；缺少的字符串和字段值不会猜测补写。
 
-```json
-{"data":"{\"total\":1}"}
-```
+如果某段数据没有变化，运行“查看上次处理诊断”查看跳过原因或转换提示，例如括号不匹配、截断内容或大整数的 JavaScript 精度风险。
 
-After selecting `/data`, its value becomes an object. Ordinary strings, URLs, paths, and strings such as `"123"` are left alone. Newly exposed nested string fields are not recursively converted unless you run the command again.
+## 支持的输入与限制
 
-## Supported input and limits
+- 支持严格 JSON，以及常见 JSON5 语法：注释、单引号、无引号或 Unicode 键名、尾逗号、十六进制数字、Infinity 和 NaN。
+- 格式化保留原始词法文本，包括未闭合字符串和注释；不会添加括号或值。全文扫描采取保守策略，可在已知的两位或四位年份日志边界恢复识别。修复是独立操作，保留数字文本和重复键，拒绝将 NaN / Infinity 有损转换为严格 JSON。
+- JavaScript 转换支持完整值、属性列表、尾部分隔逗号和日志中的多个外层候选。不接受函数、表达式或变量引用。使用计算属性 `['__proto__']` 保留普通数据属性的行为。
+- 大整数文本会保留，但生成的 JavaScript 字面量作为 Number 求值时仍可能丢失精度；应用需要时请使用 BigInt。重复的 JavaScript 键仍遵循后值覆盖前值的规则。
+- 支持反引号和波浪号围栏、CRLF 换行、普通列表及引用容器。存在歧义或不完整的容器会跳过。
+- 阅读模式拒绝无法唯一定位的来源。嵌入代码块会打开其实际源笔记，避免修改承载嵌入内容的笔记。
+- 默认处理上限为 1 MiB，可配置为 0.1 至 10 MiB；最大结构深度为 128。任意 Markdown 或不规范日志无法保证正确推断，应用全文修改前请检查预览。
+- 字符串中的 JSON 默认必须符合严格 JSON；可通过设置明确允许其中使用 JSON5。
 
-- Strict JSON, plus common JSON5 syntax: comments, single quotes, unquoted/Unicode keys, trailing commas, hexadecimal numbers, Infinity and NaN.
-- Formatting preserves token text, including unfinished strings/comments; it never adds brackets or values. Document scanning remains conservative and recovers at known two-digit/four-digit year log boundaries. Repair is separate, preserves numeric tokens and duplicate keys, and refuses lossy NaN/Infinity conversion to strict JSON.
-- JS conversion supports complete values, property lists, trailing separator commas and multiple outer log candidates. It does not accept functions, expressions or variable references. Computed `['__proto__']` keys preserve data-property behavior.
-- Large integer text is preserved, but evaluating a generated JS literal as a Number can still lose precision; use BigInt where your application requires it. Duplicate JS keys still follow JavaScript's last-value behavior.
-- Backtick and tilde fences, CRLF, ordinary list and blockquote containers are supported. Ambiguous or incomplete containers are skipped.
-- Reading mode refuses ambiguous source locations. Embedded blocks open their actual source note rather than modifying the host note.
-- Default processing limit: 1 MiB, configurable from 0.1 to 10 MiB; maximum structural depth: 128. Inputs containing arbitrary Markdown or invalid log syntax cannot always be inferred correctly; preview document changes before applying.
-- Inner stringified JSON must be strict JSON by default. A setting explicitly allows JSON5 inside strings.
+### 在原位置拆分日志 JSON
 
-## Privacy and compatibility
+日志拆块命令会格式化选中的 JSON，并在原位置包成独立的 `json` 代码块。外围日志文字、分隔符和记录顺序保留，未选候选保持原样。检查完整日志预览后，一次应用选中的修改，可一次撤销；不会添加入参或出参标题。处理整个日志代码块时，会移除外层围栏，让新 JSON 围栏独立显示。在普通围栏内部局部选择时，会保留其余正文；引用或列表容器内的局部选区会被拒绝，避免生成无效的嵌套围栏。
 
-All formatting and conversion run locally on your device. No network requests, accounts, payments, advertisements, or telemetry are used. The plugin only accesses notes and its settings within the vault; it does not access files outside the vault. It never reads the clipboard. Copy commands and copy buttons write only the result you request.
+## 隐私与兼容性
 
-The declared API minimum is Obsidian 1.8.7, the version that introduced `getLanguage`. Desktop behavior has been verified on Obsidian 1.14.4. The runtime uses Web APIs and does not require Node.js or Electron APIs. Native mobile devices and the minimum app version have not yet been tested; see the validation notes for the exact test coverage.
+所有格式化和转换都在设备本地完成。不发送网络请求，不需要账号或付费，不含广告或遥测。插件只访问笔记库内的笔记及自身设置，不访问笔记库之外的文件。不会读取剪贴板；复制命令和按钮只写入用户要求复制的结果。
 
-Codeblock Customizer 1.4.7 is supported in Live Preview, source mode (when enabled in CBC), and reading mode. Loose JSON adds a separate button to each reliably matched CBC toolbar without moving CodeMirror widgets or replacing CBC copy/fold controls. Excluded blocks keep the native layout. Unmatched toolbars use a separate action row; shared grouped headers are not used to infer a source block. Settings changes, toolbar rebuilds, and plugin unloading clean up the added controls. Native mobile behavior remains unverified.
+声明的最低 API 版本为 Obsidian 1.8.7，该版本引入了 `getLanguage`。桌面行为已在 Obsidian 1.14.4 验证。运行时使用网页 API，不依赖 Node.js 或 Electron API。移动设备和最低应用版本尚未实测；具体覆盖范围见验证记录。
 
-## Development
+支持 Codeblock Customizer 1.4.7 的实时预览、源码模式（需在 CBC 中启用）和阅读模式。Loose JSON 会在可靠匹配的 CBC 工具栏中增加独立按钮，不移动 CodeMirror 控件，也不替换 CBC 的复制或折叠按钮。被 CBC 排除的代码块保留原布局。无法匹配的工具栏使用独立操作行；不通过共享分组标题推断源代码块。设置变化、工具栏重建和插件卸载时会清理新增控件。移动设备上的行为尚未验证。
 
-Node.js 22 or later:
+## 开发
+
+需要 Node.js 22 或更新版本：
 
 ```sh
 npm ci
@@ -93,16 +361,16 @@ npm run test:coverage
 npm run package
 ```
 
-Runtime verification in the isolated Chinese test vault is available via `node scripts/verify-obsidian.mjs`; it creates a uniquely named synthetic note. Keep that vault window visible for reading-mode checks. Hidden-window skips are reported explicitly. See [validation notes](docs/validation.md) for tested behavior and remaining release checks.
+运行 `node scripts/verify-obsidian.mjs` 可在独立中文测试库中验证实际运行行为；脚本会创建名称唯一的模拟笔记。验证阅读模式时，请保持该笔记库窗口可见。窗口隐藏导致的跳过会明确报告。已验证行为及剩余发布检查见[验证记录](docs/validation.md)。
 
-CBC runtime verification is available via `node scripts/verify-codeblock-customizer.mjs` with both plugins enabled in the visible isolated test vault. It restores plugin settings after verification and writes a local receipt under `.runtime-test/`.
+运行 `node scripts/verify-codeblock-customizer.mjs` 可验证 CBC 兼容性，需在可见的独立测试库中启用两个插件。验证结束后会恢复插件设置，并在 `.runtime-test/` 写入本地记录。
 
-Copy the files in `dist/loose-json-0.2.1/` into a test vault. `npm run dev` rebuilds on source changes; it does not start an HTTP server. Reload the plugin after rebuilding.
+把 `dist/loose-json-0.2.2/` 中的文件复制到测试库。`npm run dev` 会在源码变化时重新构建，不启动 HTTP 服务。构建后需重新加载插件。
 
-The core tokenizer, range scanner, parser, and formatter were written independently. Formatting changes whitespace between tokens rather than parsing and reserializing numeric values. Obsidian and CodeMirror are external host dependencies; JSON5 is bundled solely for string/key decoding.
+核心词法分析器、范围扫描器、解析器和格式化器均独立编写。格式化只修改词法单元之间的空白，不会把数字解析后重新序列化。Obsidian 和 CodeMirror 是宿主提供的外部依赖；随插件打包的 JSON5 仅用于字符串和键名解码。
 
-## Credits and license
+## 致谢与许可
 
-Inspired by the practical workflow of [Simple Code Formatter](https://github.com/wiop93256/Simple-Code-Formmater), with thanks to its author. No source or assets were copied from that plugin.
+实用工作流程受到 [Simple Code Formatter](https://github.com/wiop93256/Simple-Code-Formmater) 的启发，感谢其作者。未复制该插件的源码或资源。
 
-MIT © 2026 Cynthia Ding (Cynthia2023XY). See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT © 2026 Cynthia Ding（Cynthia2023XY）。参见[许可协议](LICENSE)和[第三方许可声明](THIRD_PARTY_NOTICES.md)。

@@ -1,5 +1,5 @@
 import {translator, describe, errorDiagnostic, type Translator} from './i18n';
-import {generatedBlocks} from './core/markdown';
+import {fencedLog, generatedBlocks} from './core/markdown';
 import type {Conversion, Output} from './core/conversion';
 import {App, Modal, Notice} from 'obsidian';
 import type {Change, Plan} from './core/engine';
@@ -115,9 +115,17 @@ export class ConversionModal extends Modal {
   onOpen(): void {
     this.titleEl.setText(this.t(this.mode === 'javascript' ? 'jsTitle' : this.mode === 'repair' ? 'repairTitle' : 'extractTitle'));
     this.modalEl.addClass('loose-json-modal');
-    this.contentEl.createEl('p', {text: this.t(this.mode === 'javascript' ? 'jsHint' : 'conversionHint')});
+    this.contentEl.createEl('p', {text: this.t(this.mode === 'javascript' ? 'jsHint' : this.mode === 'extract' ? 'extractHint' : 'conversionHint')});
     // 结果候选保留顺序，不默认合并日志记录。
     const selected = new Set(this.mode === 'javascript' ? [] : this.result.candidates);
+    // 可展开查看完整日志结果，候选勾选变化时同步刷新。
+    const complete = this.mode === 'extract' ? this.contentEl.createEl('details') : undefined;
+    complete?.createEl('summary', {text: this.t('extractPreview')});
+    // 日志完整结果始终使用纯文本展示，避免解释用户日志中的 HTML。
+    const completePreview = complete?.createEl('pre');
+    // 完整结果与实际应用使用同一范围拼接函数。
+    const refreshComplete = (): void => {completePreview?.setText(fencedLog(this.source, this.result.candidates.filter(item => selected.has(item)), this.source.includes('\r\n') ? '\r\n' : '\n'));};
+    refreshComplete();
     // 候选和当前输出形态的关联。
     const outputs = new Map<Output, string>();
     // 每批只挂载五十个候选，避免大日志创建过量预览 DOM。
@@ -140,7 +148,7 @@ export class ConversionModal extends Modal {
         // 当前候选的选择控件。
         const input = label.createEl('input', {type: this.mode === 'javascript' ? 'radio' : 'checkbox'});
         input.name = 'loose-json-candidate-' + this.mode; input.checked = selected.has(item);
-        input.addEventListener('change', () => {if (this.mode === 'javascript') selected.clear(); if (input.checked) selected.add(item); else selected.delete(item);});
+        input.addEventListener('change', () => {if (this.mode === 'javascript') selected.clear(); if (input.checked) selected.add(item); else selected.delete(item); refreshComplete();});
         item.warnings.forEach(warning => card.createEl('p', {text: describe(warning, this.t), cls: 'loose-json-warning'}));
         // 展示可复制生成结果的普通文本容器。
         const preview = card.createEl('pre', {text: item.text});
@@ -177,8 +185,10 @@ export class ConversionModal extends Modal {
     };
     // 统一绑定用户明确触发的操作。
     const action = (key: string, execute: () => void): void => {this.contentEl.createEl('button', {text: this.t(key)}).addEventListener('click', () => {try {execute();} catch (error) {new Notice(describe(errorDiagnostic(error), this.t));}});};
-    action('copy', () => {const items = choose(); if (!items.length) return; void navigator.clipboard.writeText(items.length === 1 ? items[0].text : generatedBlocks(items.map(item => ({text: item.text, label: item.label})))).then(() => new Notice(this.t('copied')), () => new Notice(this.t('copyFailed')));});
-    if (this.mode !== 'javascript') {
+    action('copy', () => {const items = choose(); if (!items.length) return; void navigator.clipboard.writeText(this.mode === 'extract' ? fencedLog(this.source, items, this.source.includes('\r\n') ? '\r\n' : '\n') : items.length === 1 ? items[0].text : generatedBlocks(items.map(item => ({text: item.text, label: item.label})))).then(() => new Notice(this.t('copied')), () => new Notice(this.t('copyFailed')));});
+    if (this.mode === 'extract') {
+      action('apply', () => {const items = choose(); if (items.length) {this.write(items, true); this.close();}});
+    } else if (this.mode !== 'javascript') {
       action('insert', () => {const items = choose(); if (items.length) {this.write(items, false); this.close();}});
       action('replace', () => {const items = choose(); if (items.length) {this.write(items, true); this.close();}});
     }

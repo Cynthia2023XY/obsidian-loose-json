@@ -2,7 +2,7 @@ import {describe, expect, it} from 'vitest';
 import {javascriptCandidates, repairCandidates, extractCandidates} from '../src/core/conversion';
 import {fragmentPlan, documentPlan, applyChanges} from '../src/core/engine';
 import {tokenize} from '../src/core/syntax';
-import {codeBlocks, generatedBlocks} from '../src/core/markdown';
+import {codeBlocks, fencedLog, generatedBlocks} from '../src/core/markdown';
 import {resolveLocale, translator, describe as message} from '../src/i18n';
 
 /** 不含真实接口数据的多段日志样例 */
@@ -120,5 +120,50 @@ describe('generated code blocks', () => {
     expect(generated).toContain('>   `````json\r\n');
     expect(codeBlocks(generated).map(block => block.content)).toEqual([text, 'null']);
     expect(codeBlocks(generated).every(block => block.supported)).toBe(true);
+  });
+});
+
+
+describe('原位置日志代码块', () => {
+  it('只选中 JSON 时围栏仍与选区外的日志前后缀隔开', () => {
+    // 用户只选中对象本体，日志标签与后缀位于选区外。
+    const source = '{"a":1}';
+    // 检测和拼接仍绑定原始源范围。
+    const items = extractCandidates(source).candidates;
+    expect(fencedLog(source, items, '\n', {before: '=', after: ';'})).toBe('\n```json\n' + items[0].text + '\n```\n');
+  });
+  it('保留两条日志的完整前后缀及顺序，不添加标题', () => {
+    // 模拟同类业务日志，不使用真实账号或令牌。
+    const source = '26-10-13.14:20:29.523 [T-1] INFO 请求 CheckMissionWidgetRequest={"id":9223372036854775807,"risk":{"text":"} ["}}\n26-10-13.14:20:29.524 [T-1] INFO 转化后的请求{"a":2}';
+    // 使用实际检测器获取原文偏移，不能重新通过正则猜测位置。
+    const items = extractCandidates(source).candidates;
+    // 输出仅替换两个 JSON 范围，其余内容逐字保留。
+    const result = fencedLog(source, items);
+    expect(result).toBe('26-10-13.14:20:29.523 [T-1] INFO 请求 CheckMissionWidgetRequest=\n```json\n' + items[0].text + '\n```\n\n26-10-13.14:20:29.524 [T-1] INFO 转化后的请求\n```json\n' + items[1].text + '\n```');
+    expect(result).not.toContain('入参 ·');
+    expect(codeBlocks(result).map(block => block.content)).toEqual(items.map(item => item.text));
+    expect(result).toContain('9223372036854775807');
+  });
+  it('同一行多个候选、标量和尾部文字保留，未选中候选不变', () => {
+    // 一条记录同时含入参、出参和完成说明。
+    const source = 'INFO request={"a":1}, response=null; finished';
+    // 每个候选保留真实范围。
+    const items = extractCandidates(source).candidates;
+    expect(fencedLog(source, items)).toBe('INFO request=\n```json\n' + items[0].text + '\n```\n, response=\n```json\nnull\n```\n; finished');
+    expect(fencedLog(source, [items[0]])).toContain(', response=null; finished');
+  });
+  it('保留 CRLF、字符串内反引号，损坏候选不修改且拒绝过期范围', () => {
+    // 反引号数量要求生成更长围栏，CRLF 不能被统一成 LF。
+    const source = 'INFO data={"value":"````"}\r\nnext record';
+    // 候选来自真实检测结果。
+    const items = extractCandidates(source).candidates;
+    // 生成结果保持原始换行风格。
+    const result = fencedLog(source, items, '\r\n');
+    expect(result).toContain('`````json\r\n');
+    expect(result.replace(/\r\n/g, '')).not.toContain('\n');
+    expect(codeBlocks(result)).toHaveLength(1);
+    expect(() => fencedLog('changed'+source, items)).toThrow();
+    expect(() => fencedLog(source, [items[0], items[0]])).toThrow();
+    expect(fencedLog('INFO request={"a":', extractCandidates('INFO request={"a":').candidates)).toBe('INFO request={"a":');
   });
 });

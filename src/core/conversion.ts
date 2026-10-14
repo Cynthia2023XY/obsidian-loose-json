@@ -113,5 +113,5 @@ export function repairCandidates(source: string, options: Options = DEFAULT_OPTI
 export function extractCandidates(source: string, options = DEFAULT_OPTIONS): Conversion {
   // 原标签和顺序用于展示，不把相邻记录自动配对。
   const found = detect(source);
-  return {diagnostics: found.diagnostics, candidates: found.candidates.map(candidate => ({...candidate, text: layout(candidate.parsed, options.indent, options.compactArrays), object: candidate.parsed, warnings: candidate.kind === 'log' ? [{code: 'repair.extracted'}] : []}))};
+  return {diagnostics: found.diagnostics, candidates: found.candidates.map(candidate => ({...candidate, text: layout(candidate.parsed, options.indent, options.compactArrays), object: candidate.parsed, warnings: []}))};
 }

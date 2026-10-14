@@ -1,3 +1,4 @@
+import {DataError} from '../i18n';
 /** 源文档中的半开区间 */
 export interface Range {from: number; to: number}
 /** 带源范围与容器缩进的 fenced code block */
@@ -122,4 +123,28 @@ export function generatedBlocks(items: {text: string; label: string}[], prefix =
     const fence = '`'.repeat(Math.max(3, ...(item.text.match(/`+/g) ?? []).map(value => value.length + 1)));
     return (item.label ? item.label + '\n' : '') + fence + 'json\n' + item.text + '\n' + fence;
   }).join('\n\n').split(/\r?\n/).map(line => prefix + line).join(eol);
+}
+
+/** 将选中数据在日志原位置包成围栏，范围之外的每个字符均原样保留 */
+export function fencedLog(source: string, items: {from: number; to: number; source: string; text: string}[], eol = '\n', context: {before?: string; after?: string} = {}): string {
+  // 按原始偏移一次拼接，不因先修改前面的片段而移动后续位置。
+  const sorted = [...items].sort((a, b) => a.from - b.from);
+  // 原文和独立代码块的输出片段。
+  const pieces: string[] = [];
+  // 已处理到的原文位置，用于防止重叠或过期候选。
+  let boundary = 0;
+  for (const item of sorted) {
+    if (item.from < boundary || item.to < item.from || item.to > source.length || source.slice(item.from, item.to) !== item.source) throw new DataError('error.stale');
+    pieces.push(source.slice(boundary, item.from));
+    // 起始围栏必须独占一行；只添加分隔换行，不移除外围日志。
+    const preceding = item.from > 0 ? source[item.from - 1] : context.before ?? '';
+    // 选区恰好从 JSON 起始处开始时，也要与选区外的日志前缀隔开。
+    const before = preceding && !/[\r\n]/.test(preceding) ? eol : '';
+    // 关闭围栏后隔开原日志后缀，原有换行继续保留。
+    const after = item.to < source.length || context.after ? eol : '';
+    pieces.push(before + generatedBlocks([{text: item.text, label: ''}], '', eol) + after);
+    boundary = item.to;
+  }
+  pieces.push(source.slice(boundary));
+  return pieces.join('');
 }

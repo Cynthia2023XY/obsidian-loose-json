@@ -58,7 +58,7 @@ const savedSettings = state('app.plugins.plugins["loose-json"].settings');
 try {
 evaluate('Object.assign(app.plugins.plugins["loose-json"].settings,{language:"zh",previewDocument:true,previewDecode:true,previewJs:true,buttons:true}); app.plugins.plugins["loose-json"].saveSettings();"defaults"');
 assert.equal(state('app.vault.getName()'), vault);
-assert.equal(state('app.plugins.plugins["loose-json"].manifest.version'), '0.2.1');
+assert.equal(state('app.plugins.plugins["loose-json"].manifest.version'), '0.2.2');
 evaluate(`(async()=>{ /* 本次新建的独立样例 */ const file=await app.vault.create(${JSON.stringify(path)},${JSON.stringify(source)}); await app.workspace.getLeaf(false).openFile(file,{state:{mode:"source"}});})()`);
 await until('app.workspace.getActiveFile()?.path', value => value === path);
 await until('document.querySelectorAll(".loose-json-editor-action").length', value => value === 2);
@@ -127,29 +127,30 @@ assert.ok(state('document.querySelector(".loose-json-modal").textContent').inclu
 closePreviews();
 checks.push('日志转 JS 两个候选含 null 出参，原标签保留');
 
-// 拆块默认插入原块外；原日志仍在，整个插入可单次撤销。
+// 拆块在原日志位置加围栏，日志前后缀保留且可单次撤销。
 const originalLog = state('app.workspace.activeLeaf.view.editor.getValue()');
 command('extract-json');
 await until('document.querySelector(".loose-json-modal")?.textContent', value => value?.includes('request'));
-evaluate('Array.from(document.querySelectorAll(".loose-json-modal button")).find(button=>/插入|Insert/.test(button.textContent)).click();"inserted"');
-await until('app.workspace.activeLeaf.view.editor.getValue()', value => (value.match(/```json/g) ?? []).length === 3);
-assert.ok(state('app.workspace.activeLeaf.view.editor.getValue()').startsWith(originalLog));
+evaluate('Array.from(document.querySelectorAll(".loose-json-modal button")).find(button=>/应用选中修改|Apply selected changes/.test(button.textContent)).click();"inserted"');
+await until('app.workspace.activeLeaf.view.editor.getValue()', value => (value.match(/```json/g) ?? []).length === 2);
+assert.ok(state('app.workspace.activeLeaf.view.editor.getValue()').startsWith('26-10-10.17:10:00 request=\n```json'));
+assert.ok(state('app.workspace.activeLeaf.view.editor.getValue()').includes(', response=\n```json\nnull'));
 editor('editor.undo()');
 assert.equal(state('app.workspace.activeLeaf.view.editor.getValue()'), originalLog);
-checks.push('日志拆块保留原文，在围栏外生成入参和 null 出参，单次撤销');
+checks.push('日志原位置包围 JSON 和 null，保留前后缀且单次撤销');
 
 // 延迟加载的候选仍保留默认结果，批量插入不得出现 undefined。
 const manyLogs = '```json\n' + Array.from({length: 51}, (_, index) => `request={"item":${index}}`).join('\n') + '\n```\n';
 editor(`editor.setValue(${JSON.stringify(manyLogs)});editor.setCursor({line:1,ch:0})`);
 command('extract-json');
 await until('document.querySelectorAll(".loose-json-change").length', value => value === 50);
-evaluate('Array.from(document.querySelectorAll(".loose-json-modal button")).find(button=>/插入|Insert/.test(button.textContent)).click();"inserted"');
-await until('app.workspace.activeLeaf.view.editor.getValue()', value => (value.match(/```json/g) ?? []).length === 52);
+evaluate('Array.from(document.querySelectorAll(".loose-json-modal button")).find(button=>/应用选中修改|Apply selected changes/.test(button.textContent)).click();"inserted"');
+await until('app.workspace.activeLeaf.view.editor.getValue()', value => (value.match(/```json/g) ?? []).length === 51);
 assert.ok(state('app.workspace.activeLeaf.view.editor.getValue()').includes('"item": 50'));
 assert.ok(!state('app.workspace.activeLeaf.view.editor.getValue()').includes('undefined'));
 editor('editor.undo()');
 assert.equal(state('app.workspace.activeLeaf.view.editor.getValue()'), manyLogs);
-checks.push('51 个候选分页展示，未加载项仍正确插入，批量单次撤销');
+checks.push('51 个候选分页展示，未加载项仍正确原位置包围，批量单次撤销');
 
 // 截断排版不会补闭合，独立修复可生成严格 JSON。
 editor('editor.setValue("```json\\n{id:9223372036854775807,items:[1,2,\\n```\\n");editor.setCursor({line:1,ch:0})');
@@ -201,7 +202,7 @@ if (state('document.visibilityState') === 'visible') {
 }
 
 /** 将验收证据保存到忽略目录，避免把宿主状态推送到公开仓库 */
-const report = {date: new Intl.DateTimeFormat('sv-SE', {timeZone: 'Asia/Shanghai'}).format(new Date()), version: '0.2.1', vault, note: path, complete: skipped.length === 0, checks, skipped};
+const report = {date: new Intl.DateTimeFormat('sv-SE', {timeZone: 'Asia/Shanghai'}).format(new Date()), version: '0.2.2', vault, note: path, complete: skipped.length === 0, checks, skipped};
 await mkdir('.runtime-test', {recursive: true});
 await writeFile('.runtime-test/runtime.json', JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report, null, 2));
