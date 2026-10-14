@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {createSampleNote, sampleNote} from '../src/sample-note';
 import {codeBlocks} from '../src/core/markdown';
-import {fragmentPlan, decodePlan} from '../src/core/engine';
+import {fragmentPlan, decodePlan, documentPlan} from '../src/core/engine';
 import {extractCandidates, repairCandidates} from '../src/core/conversion';
 
 /** 模拟笔记库文件和文件夹，验证示例不会覆盖用户内容 */
@@ -35,6 +35,14 @@ describe('入门示例笔记', () => {
     expect(decodePlan(blocks[4].content).changes).toHaveLength(1);
     expect(extractCandidates(blocks[5].content).candidates).toHaveLength(2);
     expect(repairCandidates(blocks[6].content).candidates).toHaveLength(1);
+    // 全文格式化不能修改中英文说明中的内联对象或受保护的 JS 示例。
+    for (const locale of ['zh', 'en'] as const) {
+      // 说明文字与可操作代码块使用相同的边界扫描。
+      const note = sampleNote(locale);
+      // 只允许在可格式化的数据围栏内部产生修改。
+      const allowed = codeBlocks(note).filter(block => block.language !== 'js');
+      expect(documentPlan(note).changes.every(change => allowed.some(block => change.from >= block.bodyFrom && change.to <= block.bodyTo))).toBe(true);
+    }
   });
   it('笔记库写入失败时报告错误，不伪造成功路径', async () => {
     // 模拟只读存储或同步写入失败。
