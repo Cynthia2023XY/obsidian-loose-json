@@ -1,0 +1,26 @@
+src/i18n.ts
+  s_cada412a51cfd8::t_821dd58ce323bf 28-29,41-43,66
+src/main.ts
+  s_cada412a51cfd8::t_821dd58ce323bf 7,12,14-15,17,42-43,57,72-90,95,216,224-239
+README-EN.md
+  s_cada412a51cfd8::t_ee31d86fabcf98 1-367,369-376
+README.md
+  s_cada412a51cfd8::t_ee31d86fabcf98 5,7,9,11,13-19,21,23,25-37,39-50,250,274,288,331,333-340,342,344,346,348,350,352,354,356,364,366,370,372,374,376
+  s_cada412a51cfd8::t_f2142ff3f10e2f 52-117,119,121-131,133,135-245,248-249,253-273,275-286,289-303,305-309,312-319,327,329
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "eb4f4353e5e3e17df257aca60c9a72e99269e4c6",
+  "prompts": {},
+  "sessions": {
+    "s_cada412a51cfd8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a13338-2e13-7f11-9173-12cb03682391",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "dingxinyi.2 <dingxinyi.2@jd.com>"
+    }
+  }
+}
