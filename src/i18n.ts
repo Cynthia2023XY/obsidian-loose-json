@@ -44,6 +44,8 @@ const TEXT: Record<string, readonly [string, string]> = {
   'setting.language': ['界面语言', 'Interface language'], 'setting.system': ['跟随 Obsidian', 'Use Obsidian language'],
   'setting.languageHint': ['按钮与后续窗口立即更新；命令名称重新启用插件后更新，快捷键保持。', 'Buttons and new dialogs update immediately. Re-enable the plugin to refresh command names; hotkeys are kept.'],
   'setting.indent': ['缩进', 'Indentation'], 'setting.spaces': ['{count} 空格', '{count} spaces'],
+  'setting.unlabelledButtons': ['在未声明语言的代码块中展示格式化按钮', 'Show format buttons in unlabelled code blocks'],
+  'setting.unlabelledButtonsHint': ['默认开启。关闭后，仅在明确声明为 json 的代码块中展示格式化按钮；不影响命令面板操作。', 'Enabled by default. Disable to show format buttons only in code blocks explicitly labelled json. Command palette actions are unaffected.'],
   'setting.buttons': ['代码块格式化按钮', 'Code block format buttons'],
   'setting.compact': ['简单数组保持单行', 'Keep simple arrays on one line'], 'setting.compactHint': ['关闭时数组每项换行。', 'Otherwise, each array item uses a separate line.'],
   'setting.inner': ['允许内部字符串使用 JSON5', 'Allow JSON5 in stringified fields'], 'setting.innerHint': ['默认要求内部内容是严格 JSON。', 'Inner content must be strict JSON by default.'],

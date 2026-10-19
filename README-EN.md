@@ -8,6 +8,8 @@ An offline **loose JSON formatter for Obsidian, designed to handle non-standard 
 
 Loose formatting changes layout while preserving the original data and syntax. It does not automatically convert non-standard JSON to strict JSON or invent missing values. To produce strict JSON, use the separate Repair to strict JSON command and review its preview.
 
+Format buttons appear in `json` and unlabelled code blocks by default. Disable “Show format buttons in unlabelled code blocks” in settings to show buttons only in blocks explicitly labelled `json`. Command palette actions are unaffected.
+
 ## Features
 
 - Loosely format selected text or the current `json` / unlabelled fenced code block, including strict JSON, common non-standard JSON syntax and JSON fragments within logs.

@@ -5,16 +5,16 @@ import type {EditorView} from '@codemirror/view';
 import {getLanguage, Editor, MarkdownRenderChild, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, type MarkdownPostProcessorContext} from 'obsidian';
 import {applyChanges, DEFAULT_OPTIONS, type Change, type Options, type Plan} from './core/engine';
 import {blockBody, codeBlocks, fencedLog, generatedBlocks, type CodeBlock} from './core/markdown';
-import {buttonsEnabled, buttonLabels, editorButtons} from './editor-buttons';
+import {buttonsEnabled, buttonLabels, editorButtons, unlabelledButtonsEnabled} from './editor-buttons';
 import {CBC_SHARED_HEADERS, CBC_TOOLBARS, CodeblockToolbar} from './codeblock-toolbar';
 import {startJob, type Operation} from './jobs';
 import {ChangesModal, ConversionModal, DiagnosticModal, ProgressModal} from './modals';
 import {createSampleNote} from './sample-note';
 
 /** 持久化用户设置及首次示例创建状态 */
-interface Settings {indent: '2' | '4' | 'tab'; buttons: boolean; compactArrays: boolean; allowInnerJson5: boolean; maxMiB: number; language: Language; previewDocument: boolean; previewDecode: boolean; previewJs: boolean; sampleNoteCreated: boolean}
+interface Settings {indent: '2' | '4' | 'tab'; /** 是否在未声明语言的代码块中展示格式化按钮 */ unlabelledButtons: boolean; buttons: boolean; compactArrays: boolean; allowInnerJson5: boolean; maxMiB: number; language: Language; previewDocument: boolean; previewDecode: boolean; previewJs: boolean; sampleNoteCreated: boolean}
 /** 插件初始设置 */
-const DEFAULT_SETTINGS: Settings = {indent: '2', buttons: true, compactArrays: false, allowInnerJson5: false, maxMiB: 1, language: 'system', previewDocument: true, previewDecode: true, previewJs: true, sampleNoteCreated: false};
+const DEFAULT_SETTINGS: Settings = {indent: '2', unlabelledButtons: true, buttons: true, compactArrays: false, allowInnerJson5: false, maxMiB: 1, language: 'system', previewDocument: true, previewDecode: true, previewJs: true, sampleNoteCreated: false};
 /** 命令定位结果，保留完整快照以防预览后内容变更 */
 interface Target {snapshot: string; from: number; to: number; content: string; block?: CodeBlock; parentBlock?: CodeBlock}
 /** 可复用于旧版设置页与新版设置搜索的声明式展示定义 */
@@ -55,10 +55,11 @@ export default class LooseJsonPlugin extends Plugin {
     }
     if (!['system', 'zh', 'en'].includes(this.settings.language)) this.settings.language = 'system';
     this.settings.sampleNoteCreated = stored?.sampleNoteCreated === true;
+    this.settings.unlabelledButtons = stored?.unlabelledButtons !== false;
     this.t = translator(resolveLocale(this.settings.language, getLanguage()));
     this.addSettingTab(new LooseJsonSettings(this));
     this.registerEditorExtension([
-      this.buttonCompartment.of([buttonsEnabled.of(this.settings.buttons), buttonLabels.of([this.t('button.format'), this.t('button.title')])]),
+      this.buttonCompartment.of([buttonsEnabled.of(this.settings.buttons), unlabelledButtonsEnabled.of(this.settings.unlabelledButtons), buttonLabels.of([this.t('button.format'), this.t('button.title')])]),
       editorButtons((view, from) => {void this.formatEditorBlock(view, from);}, (view, mounted) => {if (mounted) this.editorViews.add(view); else this.editorViews.delete(view);})
     ]);
     this.registerMarkdownPostProcessor((element, context) => this.readingButtons(element, context));
@@ -121,10 +122,10 @@ export default class LooseJsonPlugin extends Plugin {
     // 当前打开的宿主编辑器允许公开 API 重配注册的扩展。
     this.editorViews.forEach(view => {
       if (!view.dom.isConnected) {this.editorViews.delete(view); return;}
-      view.dispatch({effects: this.buttonCompartment.reconfigure([buttonsEnabled.of(this.settings.buttons), buttonLabels.of([this.t('button.format'), this.t('button.title')])])});
+      view.dispatch({effects: this.buttonCompartment.reconfigure([buttonsEnabled.of(this.settings.buttons), unlabelledButtonsEnabled.of(this.settings.unlabelledButtons), buttonLabels.of([this.t('button.format'), this.t('button.title')])])});
     });
     this.readingToolbars.forEach(toolbar => toolbar.schedule());
-    this.readingActions.forEach(button => {button.hidden = !this.settings.buttons; button.setText(this.t('button.format')); button.setAttribute('aria-label', this.t('button.title'));});
+    this.readingActions.forEach(button => {button.hidden = !this.settings.buttons || button.dataset.looseJsonLanguage === '' && !this.settings.unlabelledButtons; button.setText(this.t('button.format')); button.setAttribute('aria-label', this.t('button.title'));});
   }
 
   /** 运行可取消任务，避免处理时阻塞编辑窗口 */
@@ -303,18 +304,19 @@ export default class LooseJsonPlugin extends Plugin {
       if (!['json', ''].includes(language)) continue;
       // 只操作所属代码块的格式化入口。
       const button = pre.createEl('button', {text: this.t('button.format'), cls: 'loose-json-format-button loose-json-reading-action', attr: {'aria-label': this.t('button.title')}});
+      button.dataset.looseJsonLanguage = language;
       pre.addClass('loose-json-code-block');
       this.readingActions.add(button);
       // 随渲染区生命周期销毁按钮，插件卸载时不留下可点击旧操作。
       const child = new MarkdownRenderChild(pre);
       // 适配器只创建额外工具栏入口，仍委托原按钮按源范围执行操作。
       const toolbar = new CodeblockToolbar(pre, () => [{anchor: button,
-        targets: this.settings.buttons && !pre.classList.contains('displayedInGroup') ? Array.from(pre.querySelectorAll<HTMLElement>(CBC_TOOLBARS)).filter(target => !target.closest(CBC_SHARED_HEADERS)) : [],
+        targets: this.settings.buttons && (language === 'json' || this.settings.unlabelledButtons) && !pre.classList.contains('displayedInGroup') ? Array.from(pre.querySelectorAll<HTMLElement>(CBC_TOOLBARS)).filter(target => !target.closest(CBC_SHARED_HEADERS)) : [],
         label: this.t('button.format'), title: this.t('button.title'), run: () => button.click()}]);
       this.readingToolbars.add(toolbar);
       child.register(() => {toolbar.destroy(); this.readingToolbars.delete(toolbar); button.remove(); pre.removeClass('loose-json-code-block'); this.readingActions.delete(button);});
       context.addChild(child);
-      button.hidden = !this.settings.buttons;
+      button.hidden = !this.settings.buttons || language === '' && !this.settings.unlabelledButtons;
       // 宿主提供的代码块所属源章节范围。
       const info = context.getSectionInfo(pre);
       // 用于核对真实源代码块的渲染文本。
@@ -362,6 +364,7 @@ class LooseJsonSettings extends PluginSettingTab {
       ...(['previewDocument', 'previewDecode', 'previewJs'] as const).map(key => ({name: this.plugin.t('setting.' + key), desc: this.plugin.t('setting.' + key + 'Hint'), render: (setting: Setting) => {setting.addToggle(input => input.setValue(this.plugin.settings[key]).onChange(value => {this.plugin.settings[key] = value; void this.plugin.saveSettings();}));}})),
       {name: this.plugin.t('setting.indent'), render: setting => {setting.addDropdown(input => input.addOptions({'2': this.plugin.t('setting.spaces', {count: 2}), '4': this.plugin.t('setting.spaces', {count: 4}), tab: 'Tab'}).setValue(this.plugin.settings.indent).onChange(value => {this.plugin.settings.indent = value as Settings['indent']; void this.plugin.saveSettings();}));}},
       {name: this.plugin.t('setting.buttons'), render: setting => {setting.addToggle(input => input.setValue(this.plugin.settings.buttons).onChange(value => {this.plugin.settings.buttons = value; void this.plugin.saveSettings();}));}},
+      {name: this.plugin.t('setting.unlabelledButtons'), desc: this.plugin.t('setting.unlabelledButtonsHint'), render: setting => {setting.addToggle(input => input.setValue(this.plugin.settings.unlabelledButtons).onChange(value => {this.plugin.settings.unlabelledButtons = value; void this.plugin.saveSettings();}));}},
       {name: this.plugin.t('setting.compact'), desc: this.plugin.t('setting.compactHint'), render: setting => {setting.addToggle(input => input.setValue(this.plugin.settings.compactArrays).onChange(value => {this.plugin.settings.compactArrays = value; void this.plugin.saveSettings();}));}},
       {name: this.plugin.t('setting.inner'), desc: this.plugin.t('setting.innerHint'), render: setting => {setting.addToggle(input => input.setValue(this.plugin.settings.allowInnerJson5).onChange(value => {this.plugin.settings.allowInnerJson5 = value; void this.plugin.saveSettings();}));}},
       {name: this.plugin.t('setting.limit'), desc: this.plugin.t('setting.limitHint'), render: setting => {setting.addText(input => input.setValue(String(this.plugin.settings.maxMiB)).onChange(value => {

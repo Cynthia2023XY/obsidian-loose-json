@@ -5,6 +5,8 @@ import {CBC_SHARED_HEADERS, CBC_TOOLBARS, CodeblockToolbar, type ToolbarAction} 
 
 /** 设置变更通过 facet 通知所有打开的编辑器 */
 export const buttonsEnabled = Facet.define<boolean, boolean>({combine: values => values.at(-1) ?? true});
+/** 是否为未声明语言的代码块展示格式化入口 */
+export const unlabelledButtonsEnabled = Facet.define<boolean, boolean>({combine: values => values.at(-1) ?? true});
 /** 按钮文案随语言配置刷新 */
 export const buttonLabels = Facet.define<readonly string[], readonly string[]>({combine: values => values.at(-1) ?? ['格式化', '格式化此 JSON 代码块']});
 /** 按钮操作绑定编辑器和真实代码块范围 */
@@ -54,7 +56,7 @@ export function editorButtons(action: BlockAction, track: (view: EditorView, mou
     destroy(): void {this.toolbar.destroy(); track(this.view, false);}
     /** 文档或设置变化时重新绑定源位置 */
     update(update: ViewUpdate): void {
-      if (update.docChanged || update.viewportChanged || update.startState.facet(buttonsEnabled) !== update.state.facet(buttonsEnabled) || update.startState.facet(buttonLabels) !== update.state.facet(buttonLabels)) this.decorations = this.build(update.view);
+      if (update.docChanged || update.viewportChanged || update.startState.facet(buttonsEnabled) !== update.state.facet(buttonsEnabled) || update.startState.facet(buttonLabels) !== update.state.facet(buttonLabels) || update.startState.facet(unlabelledButtonsEnabled) !== update.state.facet(unlabelledButtonsEnabled)) this.decorations = this.build(update.view);
       this.toolbar.schedule();
     }
     /** 按源文档位置匹配 CBC 工具栏，不猜测光标或共享分组标题所属块 */
@@ -77,7 +79,7 @@ export function editorButtons(action: BlockAction, track: (view: EditorView, mou
         } catch { /* 宿主正在替换装饰时等待下一次 DOM 更新，不猜测源位置。 */ }
       }
       // 只有可靠解析并支持的代码块可提供格式化入口。
-      const blocks = codeBlocks(snapshot).filter(block => block.supported && ['json', ''].includes(block.language));
+      const blocks = codeBlocks(snapshot).filter(block => block.supported && (block.language === 'json' || block.language === '' && this.view.state.facet(unlabelledButtonsEnabled)));
       // 当前界面的本地化文案，设置变化后下一帧刷新。
       const labels = this.view.state.facet(buttonLabels);
       // 各代码块独立的兼容入口绑定。
@@ -99,7 +101,7 @@ export function editorButtons(action: BlockAction, track: (view: EditorView, mou
       if (!view.state.facet(buttonsEnabled)) return Decoration.none;
       // 文档中已经可靠定位的 fenced 代码块。
       const blocks = codeBlocks(view.state.doc.toString());
-      return Decoration.set(blocks.filter(block => block.supported && ['json', ''].includes(block.language)).map(block =>
+      return Decoration.set(blocks.filter(block => block.supported && (block.language === 'json' || block.language === '' && view.state.facet(unlabelledButtonsEnabled))).map(block =>
         Decoration.widget({widget: new FormatWidget(block.from, action, view.state.facet(buttonLabels)), side: 1}).range(view.state.doc.lineAt(block.from).to)
       ));
     }

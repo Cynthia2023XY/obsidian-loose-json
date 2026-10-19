@@ -2,7 +2,7 @@
 import {afterEach, describe, expect, it} from 'vitest';
 import {Compartment, EditorState} from '@codemirror/state';
 import {Decoration, EditorView, WidgetType} from '@codemirror/view';
-import {buttonsEnabled, editorButtons} from '../src/editor-buttons';
+import {buttonsEnabled, editorButtons, unlabelledButtonsEnabled} from '../src/editor-buttons';
 
 /** 测试结束销毁真实 CodeMirror 实例，验证生命周期释放 */
 const views: EditorView[] = [];
@@ -23,6 +23,25 @@ describe('编辑器按钮实际行为', () => {
     view.dispatch({changes: {from: 0, insert: '标题\n'}});
     document.querySelector<HTMLButtonElement>('.loose-json-format-button')?.click();
     expect(clicked).toEqual([0, 3]);
+  });
+  it('未声明语言按钮默认展示，关闭后只保留 json，重新开启即时恢复', () => {
+    // 独立重配语言范围，保留已有文档和按钮总开关。
+    const configuration = new Compartment();
+    // JSON、未声明语言及其他语言用于验证按钮的可见范围。
+    const source = '```json\n{"a":1}\n```\n```\n{"b":2}\n```\n```js\n{"c":3}\n```';
+    // 用户实际点击的源代码块位置。
+    const clicked: number[] = [];
+    // 使用默认 facet 验证旧配置也继续展示未声明语言按钮。
+    const view = new EditorView({parent: document.body, state: EditorState.create({doc: source, extensions: [configuration.of([]), editorButtons((_, from) => clicked.push(from))]})});
+    views.push(view);
+    expect(document.querySelectorAll('.loose-json-format-button')).toHaveLength(2);
+    view.dispatch({effects: configuration.reconfigure(unlabelledButtonsEnabled.of(false))});
+    expect(document.querySelectorAll('.loose-json-format-button')).toHaveLength(1);
+    document.querySelector<HTMLButtonElement>('.loose-json-format-button')?.click();
+    expect(clicked).toEqual([0]);
+    view.dispatch({effects: configuration.reconfigure(unlabelledButtonsEnabled.of(true))});
+    expect(document.querySelectorAll('.loose-json-format-button')).toHaveLength(2);
+    expect(view.state.doc.toString()).toBe(source);
   });
   it('动态设置移除并恢复按钮，编辑器销毁时注销引用', () => {
     // 重配 facet 不销毁原有文档与选区。
