@@ -1,0 +1,37 @@
+README-EN.md
+  s_fc8dceceb7899f::t_2dff058bcdd452 11-12
+README.md
+  s_fc8dceceb7899f::t_ec59ddfc3a5d25 11-12
+manifest.json
+  s_fc8dceceb7899f::t_308fefe6f51a9d 4
+package-lock.json
+  s_fc8dceceb7899f::t_216c50375f3499 3,9
+package.json
+  s_fc8dceceb7899f::t_e16850c9bdfe9a 3
+src/editor-buttons.ts
+  s_fc8dceceb7899f::t_7ead0b62c27da6 8-9,59,82,104
+src/i18n.ts
+  s_fc8dceceb7899f::t_2bc77923a9ee59 47-48
+src/main.ts
+  s_fc8dceceb7899f::t_8278d996e19b36 8,15,17,58,62,125,128,307,314,319,367
+tests/editor-test.ts
+  s_fc8dceceb7899f::t_3510dfe7daa321 5,27-45
+versions.json
+  s_fc8dceceb7899f::t_951a28861693ab 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "d74c59df822de2a0fa2eac85ba1f06e045ea8ca6",
+  "prompts": {},
+  "sessions": {
+    "s_fc8dceceb7899f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a15408-ce02-7f21-8a3a-3f9e12bc27e8",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "dingxinyi.2 <dingxinyi.2@jd.com>"
+    }
+  }
+}
